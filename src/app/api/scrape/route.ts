@@ -94,6 +94,10 @@ export async function POST(req: Request) {
     if (process.env.NODE_ENV === "production") {
       // Vercel / Production Environment
       const chromium = (await import("@sparticuz/chromium")).default;
+      
+      // Explicitly set graphics mode to false to avoid needing swiftshader
+      (chromium as any).setGraphicsMode = false;
+      
       browser = await playwright.launch({
         args: (chromium as any).args,
         executablePath: await (chromium as any).executablePath(),
