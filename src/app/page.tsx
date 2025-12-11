@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 interface Subject {
   url: string;
@@ -87,6 +88,23 @@ const ChevronRight = () => (
     <path d="m9 18 6-6-6-6" />
   </svg>
 );
+const InfoIcon = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 16v-4" />
+    <path d="M12 8h.01" />
+  </svg>
+);
 
 export default function Home() {
   const [prn, setPrn] = useState("");
@@ -150,10 +168,16 @@ export default function Home() {
                   isDarkMode ? "text-emerald-400" : "text-emerald-200"
                 }`}
               >
-                Under PCELL
+                By PCELL
               </p>
             </div>
             <div className="flex gap-2">
+              <Link
+                href="/about"
+                className="bg-white/20 p-2 rounded-full backdrop-blur-sm hover:bg-white/30 transition-all text-white flex items-center justify-center"
+              >
+                <InfoIcon />
+              </Link>
               <button
                 onClick={toggleDarkMode}
                 className="bg-white/20 p-2 rounded-full backdrop-blur-sm hover:bg-white/30 transition-all"
@@ -333,7 +357,9 @@ export default function Home() {
                     <button
                       type="submit"
                       disabled={loading}
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-emerald-200 transition-all transform active:scale-95 flex items-center justify-center gap-2 mt-4"
+                      className={`w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-2xl shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-2 mt-4 ${
+                      isDarkMode ? "shadow-emerald-900/20" : "shadow-emerald-200"
+                    }`}
                     >
                       {loading ? (
                         <span className="animate-pulse">Fetching...</span>
@@ -420,14 +446,14 @@ export default function Home() {
           {/* Footer & Disclaimer */}
           <div className="mt-4 pb-6 text-center space-y-2">
             <p className="text-xs text-gray-400 font-medium">
-              Note: Result might be ±0.1 up/down
+              Note: This is an estimated SGPA, official results may vary
             </p>
             <p
               className={`text-xs font-medium ${
                 isDarkMode ? "text-gray-500" : "text-gray-400"
               }`}
             >
-              Made with 💚 by Sai Balkawade
+              Made with 💚 by Project Cell
             </p>
           </div>
         </div>
