@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
 import { load } from "cheerio";
-import puppeteer from "puppeteer-core";
-import chromium from "@sparticuz/chromium";
 
 export const maxDuration = 60; // Allow up to 60 seconds for scraping
 export const dynamic = "force-dynamic";
@@ -94,78 +92,122 @@ export async function POST(req: Request) {
     // ---------------- BROWSER LAUNCH LOGIC ----------------
     const isProduction = process.env.NODE_ENV === "production" || process.env.VERCEL;
     
+    let page: any;
+    
     if (isProduction) {
-      // Vercel / Production Environment
+      // Vercel / Production Environment - use puppeteer-core with @sparticuz/chromium
+      const puppeteer = (await import("puppeteer-core")).default;
+      const chromium = (await import("@sparticuz/chromium")).default;
+      
       browser = await puppeteer.launch({
         args: chromium.args,
         defaultViewport: chromium.defaultViewport,
         executablePath: await chromium.executablePath(),
         headless: chromium.headless,
       });
-    } else {
-      // Local Development - use local Chrome
-      browser = await puppeteer.launch({
-        headless: true,
-        executablePath:
-          process.platform === "win32"
-            ? "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
-            : process.platform === "darwin"
-            ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-            : "/usr/bin/google-chrome",
+      
+      page = await browser.newPage();
+
+      // 1) OPEN LOGIN PAGE
+      await page.goto("https://crce-students.contineo.in/parents/", {
+        waitUntil: "networkidle2",
+        timeout: 30000,
       });
+
+      // Wait for form to load
+      await page.waitForSelector('input[name="username"]', { timeout: 10000 });
+
+      // 2) FILL LOGIN FORM (Puppeteer style)
+      const usernameInput = await page.$('input[name="username"]');
+      if (usernameInput) {
+        await usernameInput.click({ clickCount: 3 });
+        await usernameInput.type(prn);
+      }
+      await page.select('select[name="dd"]', dd);
+      await page.select('select[name="mm"]', mm);
+      await page.select('select[name="yyyy"]', yyyy);
+
+      // 3) SUBMIT
+      await Promise.all([
+        page.waitForNavigation({ waitUntil: "networkidle2", timeout: 30000 }),
+        page.click('input[type="submit"], button[type="submit"]'),
+      ]);
+    } else {
+      // Local Development - use full Playwright (which works!)
+      const { chromium: playwrightChromium } = await import("playwright");
+      
+      browser = await playwrightChromium.launch({ headless: true });
+      page = await browser.newPage();
+
+      // 1) OPEN LOGIN PAGE
+      await page.goto("https://crce-students.contineo.in/parents/", {
+        waitUntil: "networkidle",
+        timeout: 60000,
+      });
+
+      // Wait for form
+      await page.waitForSelector('input[name="username"]');
+      await page.waitForSelector('select[name="dd"]');
+
+      // 2) FILL LOGIN FORM (Playwright style - fill() clears first)
+      await page.fill('input[name="username"]', prn);
+      await page.selectOption('select[name="dd"]', dd);
+      await page.selectOption('select[name="mm"]', mm);
+      await page.selectOption('select[name="yyyy"]', yyyy);
+
+      // 3) SUBMIT
+      await Promise.all([
+        page.waitForNavigation({ waitUntil: "networkidle" }),
+        page.click('input[type="submit"], button[type="submit"]'),
+      ]);
     }
 
-    const page = await browser.newPage();
-
-    // 1) OPEN LOGIN PAGE
-    await page.goto("https://crce-students.contineo.in/parents/", {
-      waitUntil: "networkidle2",
-      timeout: 30000,
-    });
-
-    // 2) FILL LOGIN FORM
-    await page.type('input[name="username"]', prn);
-    await page.select('select[name="dd"]', dd);
-    await page.select('select[name="mm"]', mm);
-    await page.select('select[name="yyyy"]', yyyy);
-
-    // 3) SUBMIT
-    await Promise.all([
-      page.waitForNavigation({ waitUntil: "networkidle2", timeout: 30000 }),
-      page.click('button[type="submit"]'),
-    ]);
-
-    // 4) CHECK LOGIN SUCCESS
+    // 4) CHECK LOGIN SUCCESS - check if we reached the dashboard
     const pageUrl = page.url();
-    const bodyText = await page.evaluate(() => document.body.innerText);
-
-    if (
-      pageUrl.includes("parents") &&
-      !pageUrl.includes("dashboard") &&
-      (bodyText.toLowerCase().includes("invalid") ||
-        bodyText.toLowerCase().includes("error"))
-    ) {
+    
+    // The original working code checks for "task=dashboard" in URL
+    if (!pageUrl.includes("task=dashboard")) {
+      const html = await page.content();
       await browser.close();
       return NextResponse.json(
-        { error: "Invalid PRN or DOB. Login failed." },
+        { 
+          error: "Login failed. Please check PRN and DOB.",
+          currentUrl: pageUrl,
+          snippet: html.substring(0, 500)
+        },
         { status: 401 }
       );
     }
 
-    // 5) FIND RESULT LINKS FROM DASHBOARD
+    // 5) FIND RESULT LINKS FROM DASHBOARD - look for ciedetails links like original
     const dashboardHtml = await page.content();
     const $dash = load(dashboardHtml);
 
     const subjectLinks: string[] = [];
-    $dash('a[href*="result"], a[href*="marksheet"]').each((_, el) => {
+    
+    // First try to find ciedetails links (the original approach that worked)
+    $dash("a").each((_, el) => {
       const href = $dash(el).attr("href");
-      const url = absoluteUrl(href);
-      if (url && !subjectLinks.includes(url)) {
-        subjectLinks.push(url);
+      if (href && href.includes("task=ciedetails")) {
+        const url = absoluteUrl(href);
+        if (url && !subjectLinks.includes(url)) {
+          subjectLinks.push(url);
+        }
       }
     });
 
-    // Fallback: try all links in the dashboard sidebar
+    // Fallback to other result/marksheet links
+    if (subjectLinks.length === 0) {
+      $dash('a[href*="result"], a[href*="marksheet"]').each((_, el) => {
+        const href = $dash(el).attr("href");
+        const url = absoluteUrl(href);
+        if (url && !subjectLinks.includes(url)) {
+          subjectLinks.push(url);
+        }
+      });
+    }
+
+    // Final fallback: try all links in the dashboard sidebar
     if (subjectLinks.length === 0) {
       $dash("a").each((_, el) => {
         const href = $dash(el).attr("href");
@@ -184,88 +226,62 @@ export async function POST(req: Request) {
       });
     }
 
-    // 6) SCRAPE EACH SUBJECT PAGE
+    // 6) SCRAPE EACH SUBJECT PAGE (using exact logic from working server.js)
     const subjects: any[] = [];
 
     for (const url of subjectLinks) {
       try {
-        await page.goto(url, { waitUntil: "networkidle2", timeout: 20000 });
-        const html = await page.content();
-        const $ = load(html);
-
-        // Try to find subject name
-        let subjectName =
-          $("h1, h2, h3, .subject-name, .course-name").first().text().trim() ||
-          $("title").text().trim() ||
-          "Unknown Subject";
-
-        // Skip empty or navigation pages
-        if (
-          subjectName.toLowerCase().includes("dashboard") ||
-          subjectName.toLowerCase().includes("login")
-        ) {
-          continue;
-        }
-
-        // Find marks table
-        const rows: any[] = [];
-        $("table tr").each((_, tr) => {
-          const cells = $(tr).find("td, th");
-          if (cells.length >= 2) {
-            const label = $(cells[0]).text().trim();
-            const value = $(cells[1]).text().trim();
-            if (label && value) {
-              rows.push({ label, value });
-            }
-          }
+        await page.goto(url, { 
+          waitUntil: isProduction ? "networkidle2" : "domcontentloaded", 
+          timeout: 30000 
         });
+        const html = await page.content();
+        const $$ = load(html);
 
-        // Parse marks
-        let ise1 = null,
-          ise2 = null,
-          mse = null,
-          ese = null;
+        // ----------- SUBJECT NAME EXTRACTION (from server.js) -------------
+        const subjectName =
+          $$("caption").first().text().trim() ||
+          $$("h3.md-card-head-text span").first().text().trim() ||
+          null;
+
+        // FIND THE TABLE row containing marks
+        let row =
+          $$("table.cn-cie-table tbody tr").first().length ? $$("table.cn-cie-table tbody tr").first() :
+          $$("table.uk-table tbody tr").first().length ? $$("table.uk-table tbody tr").first() :
+          $$("table tbody tr").first();
+
+        const cells = row
+          .find("td")
+          .map((_: number, el: any) => $$(el).text().trim())
+          .get();
+
+        // NEW LOGIC: extract *all* "X/Y" marks dynamically
+        const markCells = cells.filter((c: string) => c.includes("/"));
+
+        const parsed = markCells.map((m: string) => parseMark(m)).filter(Boolean);
+
+        if (parsed.length === 0) continue;
+
         let totalObt = 0,
           totalMax = 0;
+        parsed.forEach((m: any) => {
+          totalObt += m.obtained;
+          totalMax += m.max;
+        });
 
-        for (const row of rows) {
-          const lbl = row.label.toLowerCase();
-          const parsed = parseMark(row.value);
-          if (!parsed) continue;
+        const percentage =
+          totalMax > 0 ? Math.round((totalObt / totalMax) * 10000) / 100 : null;
 
-          if (lbl.includes("ise1") || lbl.includes("ise 1")) {
-            ise1 = parsed;
-          } else if (lbl.includes("ise2") || lbl.includes("ise 2")) {
-            ise2 = parsed;
-          } else if (lbl.includes("mse")) {
-            mse = parsed;
-          } else if (lbl.includes("ese") || lbl.includes("end sem")) {
-            ese = parsed;
-          }
-
-          totalObt += parsed.obtained;
-          totalMax += parsed.max;
-        }
-
-        // Skip subjects with no marks at all
-        if (totalMax === 0) {
-          continue;
-        }
-
-        const percent = totalMax > 0 ? (totalObt / totalMax) * 100 : null;
-        const grade = percentToGrade(percent);
+        const grade = percentage !== null ? percentToGrade(percentage) : "NA";
         const gradePoint = gradeToPoint[grade];
 
         subjects.push({
           url,
           subjectName,
-          ise1,
-          ise2,
-          mse,
-          ese,
+          marks: markCells,
           totalObt,
           totalMax,
-          percent: percent !== null ? Math.round(percent * 100) / 100 : null,
+          percentage,
           grade,
           gradePoint,
         });
@@ -275,8 +291,8 @@ export async function POST(req: Request) {
     }
 
     // 7) TOTALS
-    const totalMarksAll = subjects.reduce((a, s) => a + (s.totalObt || 0), 0);
-    const maxMarksAll = subjects.reduce((a, s) => a + (s.totalMax || 0), 0);
+    const totalMarksAll = subjects.reduce((a: number, s: any) => a + (s.totalObt || 0), 0);
+    const maxMarksAll = subjects.reduce((a: number, s: any) => a + (s.totalMax || 0), 0);
 
     const sgpa = computeSGPA(subjects);
 
