@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { chromium as playwright } from "playwright-core";
 import { load } from "cheerio";
+import puppeteer from "puppeteer-core";
+import chromium from "@sparticuz/chromium";
 
 export const maxDuration = 60; // Allow up to 60 seconds for scraping
 export const dynamic = "force-dynamic";
@@ -30,7 +31,7 @@ const gradeToPoint: Record<string, number | null> = {
   NA: null,
 };
 
-// Parse “12/20”
+// Parse "12/20"
 function parseMark(raw: string | null) {
   if (!raw) return null;
   raw = raw.trim();
@@ -91,148 +92,180 @@ export async function POST(req: Request) {
     const mm = mmR.padStart(2, "0");
 
     // ---------------- BROWSER LAUNCH LOGIC ----------------
-    if (process.env.NODE_ENV === "production") {
-      // Vercel / Production Environment - use chromium-min with remote binary
-      const chromium = (await import("@sparticuz/chromium-min")).default;
-      
-      // Remote URL for chromium binary (hosted by Sparticuz)
-      const chromiumPack = "https://github.com/AntDX316/chromium-for-lambda/releases/download/v131.0.0/chromium-v131.0.0-pack.tar";
-      
-      browser = await playwright.launch({
+    const isProduction = process.env.NODE_ENV === "production" || process.env.VERCEL;
+    
+    if (isProduction) {
+      // Vercel / Production Environment
+      browser = await puppeteer.launch({
         args: chromium.args,
-        executablePath: await chromium.executablePath(chromiumPack),
-        headless: true,
+        defaultViewport: chromium.defaultViewport,
+        executablePath: await chromium.executablePath(),
+        headless: chromium.headless,
       });
     } else {
-      // Local Development
-      // Try to use the local 'playwright' package which includes binaries
-      try {
-        const { chromium: localChromium } = await import("playwright");
-        browser = await localChromium.launch({ headless: true });
-      } catch (e) {
-        console.error("Failed to launch local playwright", e);
-        throw new Error(
-          "Local playwright launch failed. Make sure 'playwright' is installed in devDependencies."
-        );
-      }
+      // Local Development - use local Chrome
+      browser = await puppeteer.launch({
+        headless: true,
+        executablePath:
+          process.platform === "win32"
+            ? "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+            : process.platform === "darwin"
+            ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+            : "/usr/bin/google-chrome",
+      });
     }
 
     const page = await browser.newPage();
 
     // 1) OPEN LOGIN PAGE
     await page.goto("https://crce-students.contineo.in/parents/", {
-      waitUntil: "networkidle",
-      timeout: 60000,
+      waitUntil: "networkidle2",
+      timeout: 30000,
     });
 
-    // 2) ENSURE LOGIN FIELDS EXIST
-    await page.waitForSelector('input[name="username"]');
-    await page.waitForSelector('select[name="dd"]');
+    // 2) FILL LOGIN FORM
+    await page.type('input[name="username"]', prn);
+    await page.select('select[name="dd"]', dd);
+    await page.select('select[name="mm"]', mm);
+    await page.select('select[name="yyyy"]', yyyy);
 
-    // 3) FILL LOGIN FORM
-    await page.fill('input[name="username"]', prn);
-    await page.selectOption('select[name="dd"]', dd);
-    await page.selectOption('select[name="mm"]', mm);
-    await page.selectOption('select[name="yyyy"]', yyyy);
-
+    // 3) SUBMIT
     await Promise.all([
-      page.waitForNavigation({ waitUntil: "networkidle" }),
-      page.click('input[type="submit"], button[type="submit"]'),
+      page.waitForNavigation({ waitUntil: "networkidle2", timeout: 30000 }),
+      page.click('button[type="submit"]'),
     ]);
 
-    // 4) CHECK DASHBOARD
-    if (!page.url().includes("task=dashboard")) {
-      const html = await page.content();
+    // 4) CHECK LOGIN SUCCESS
+    const pageUrl = page.url();
+    const bodyText = await page.evaluate(() => document.body.innerText);
+
+    if (
+      pageUrl.includes("parents") &&
+      !pageUrl.includes("dashboard") &&
+      (bodyText.toLowerCase().includes("invalid") ||
+        bodyText.toLowerCase().includes("error"))
+    ) {
       await browser.close();
       return NextResponse.json(
-        {
-          error: "Login failed",
-          currentUrl: page.url(),
-          snippet: html.substring(0, 1500),
-        },
-        { status: 500 }
+        { error: "Invalid PRN or DOB. Login failed." },
+        { status: 401 }
       );
     }
 
-    // 5) EXTRACT SUBJECT LINKS
+    // 5) FIND RESULT LINKS FROM DASHBOARD
     const dashboardHtml = await page.content();
-    const $ = load(dashboardHtml);
+    const $dash = load(dashboardHtml);
 
-    const subjectLinks = new Set<string>();
-
-    $("a").each((i, el) => {
-      const href = $(el).attr("href");
-      if (href && href.includes("task=ciedetails")) {
-        const abs = absoluteUrl(href);
-        if (abs) subjectLinks.add(abs);
+    const subjectLinks: string[] = [];
+    $dash('a[href*="result"], a[href*="marksheet"]').each((_, el) => {
+      const href = $dash(el).attr("href");
+      const url = absoluteUrl(href);
+      if (url && !subjectLinks.includes(url)) {
+        subjectLinks.push(url);
       }
     });
 
+    // Fallback: try all links in the dashboard sidebar
+    if (subjectLinks.length === 0) {
+      $dash("a").each((_, el) => {
+        const href = $dash(el).attr("href");
+        const text = $dash(el).text().toLowerCase();
+        if (
+          href &&
+          (text.includes("result") ||
+            text.includes("mark") ||
+            text.includes("exam"))
+        ) {
+          const url = absoluteUrl(href);
+          if (url && !subjectLinks.includes(url)) {
+            subjectLinks.push(url);
+          }
+        }
+      });
+    }
+
+    // 6) SCRAPE EACH SUBJECT PAGE
     const subjects: any[] = [];
 
-    // 6) VISIT EACH SUBJECT PAGE
-    for (const url of Array.from(subjectLinks)) {
+    for (const url of subjectLinks) {
       try {
-        await page.goto(url, {
-          waitUntil: "domcontentloaded",
-          timeout: 30000,
+        await page.goto(url, { waitUntil: "networkidle2", timeout: 20000 });
+        const html = await page.content();
+        const $ = load(html);
+
+        // Try to find subject name
+        let subjectName =
+          $("h1, h2, h3, .subject-name, .course-name").first().text().trim() ||
+          $("title").text().trim() ||
+          "Unknown Subject";
+
+        // Skip empty or navigation pages
+        if (
+          subjectName.toLowerCase().includes("dashboard") ||
+          subjectName.toLowerCase().includes("login")
+        ) {
+          continue;
+        }
+
+        // Find marks table
+        const rows: any[] = [];
+        $("table tr").each((_, tr) => {
+          const cells = $(tr).find("td, th");
+          if (cells.length >= 2) {
+            const label = $(cells[0]).text().trim();
+            const value = $(cells[1]).text().trim();
+            if (label && value) {
+              rows.push({ label, value });
+            }
+          }
         });
 
-        const html = await page.content();
-        const $$ = load(html);
-
-        // ----------- SUBJECT NAME EXTRACTION -------------
-        let rawSubjectName =
-          $$("caption").first().text().trim() ||
-          $$("h3.md-card-head-text span").first().text().trim() ||
-          null;
-
-        // Clean subject name (remove code like "12345 - " or "CS101 : ")
-        const subjectName = rawSubjectName
-          ? rawSubjectName
-              .split(/\s+[-:]\s+/)
-              .slice(1)
-              .join(" - ") || rawSubjectName
-          : null;
-
-        // FIND THE TABLE row containing marks
-        let row =
-          $$("table.cn-cie-table tbody tr").first() ||
-          $$("table.uk-table tbody tr").first() ||
-          $$("table tbody tr").first();
-
-        const cells = row
-          .find("td")
-          .map((i, el) => $$(el).text().trim())
-          .get();
-
-        // NEW LOGIC: extract *all* “X/Y” marks dynamically
-        const markCells = cells.filter((c) => c.includes("/"));
-
-        const parsed = markCells.map((m) => parseMark(m)).filter(Boolean);
-
-        if (parsed.length === 0) continue;
-
+        // Parse marks
+        let ise1 = null,
+          ise2 = null,
+          mse = null,
+          ese = null;
         let totalObt = 0,
           totalMax = 0;
-        parsed.forEach((m: any) => {
-          totalObt += m.obtained;
-          totalMax += m.max;
-        });
 
-        const percentage =
-          totalMax > 0 ? Math.round((totalObt / totalMax) * 10000) / 100 : null;
+        for (const row of rows) {
+          const lbl = row.label.toLowerCase();
+          const parsed = parseMark(row.value);
+          if (!parsed) continue;
 
-        const grade = percentage !== null ? percentToGrade(percentage) : "NA";
+          if (lbl.includes("ise1") || lbl.includes("ise 1")) {
+            ise1 = parsed;
+          } else if (lbl.includes("ise2") || lbl.includes("ise 2")) {
+            ise2 = parsed;
+          } else if (lbl.includes("mse")) {
+            mse = parsed;
+          } else if (lbl.includes("ese") || lbl.includes("end sem")) {
+            ese = parsed;
+          }
+
+          totalObt += parsed.obtained;
+          totalMax += parsed.max;
+        }
+
+        // Skip subjects with no marks at all
+        if (totalMax === 0) {
+          continue;
+        }
+
+        const percent = totalMax > 0 ? (totalObt / totalMax) * 100 : null;
+        const grade = percentToGrade(percent);
         const gradePoint = gradeToPoint[grade];
 
         subjects.push({
           url,
           subjectName,
-          marks: markCells,
+          ise1,
+          ise2,
+          mse,
+          ese,
           totalObt,
           totalMax,
-          percentage,
+          percent: percent !== null ? Math.round(percent * 100) / 100 : null,
           grade,
           gradePoint,
         });
@@ -258,6 +291,7 @@ export async function POST(req: Request) {
     });
   } catch (err: any) {
     if (browser) await browser.close();
+    console.error("Scrape error:", err);
     return NextResponse.json({ error: err.toString() }, { status: 500 });
   }
 }
