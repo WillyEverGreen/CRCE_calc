@@ -96,7 +96,6 @@ export async function POST(req: Request) {
       const chromium = (await import("@sparticuz/chromium")).default;
       browser = await playwright.launch({
         args: (chromium as any).args,
-        defaultViewport: (chromium as any).defaultViewport,
         executablePath: await (chromium as any).executablePath(),
         headless: (chromium as any).headless,
       });
