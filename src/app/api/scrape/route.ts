@@ -51,6 +51,11 @@ function computeSGPA(subjects: any[]) {
   return Math.round((pts.reduce((a, b) => a + b, 0) / pts.length) * 100) / 100;
 }
 
+function isDoubleMinor(subjectName: string | null) {
+  if (!subjectName) return false;
+  return subjectName.toUpperCase().includes("25DM");
+}
+
 function absoluteUrl(href: string | undefined) {
   if (!href) return null;
   if (href.startsWith("http")) return href;
@@ -205,16 +210,21 @@ export async function POST(req: Request) {
       }
     }
 
+    // FILTER OUT DOUBLE MINOR SUBJECTS
+    const filteredSubjects = subjects.filter(
+      (s) => !isDoubleMinor(s.subjectName)
+    );
+
     // 7) TOTALS
-    const totalMarksAll = subjects.reduce(
+    const totalMarksAll = filteredSubjects.reduce(
       (a: number, s: any) => a + (s.totalObt || 0),
       0
     );
-    const maxMarksAll = subjects.reduce(
+    const maxMarksAll = filteredSubjects.reduce(
       (a: number, s: any) => a + (s.totalMax || 0),
       0
     );
-    const sgpa = computeSGPA(subjects);
+    const sgpa = computeSGPA(filteredSubjects);
 
     await browser.close();
 
@@ -223,7 +233,7 @@ export async function POST(req: Request) {
       estimatedCgpa: sgpa,
       totalMarksAll,
       maxMarksAll,
-      subjects,
+      subjects: filteredSubjects,
     });
   } catch (err: any) {
     if (browser) await browser.close();
