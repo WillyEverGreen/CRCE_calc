@@ -48,13 +48,7 @@ function computeSGPA(subjects: any[]) {
     .map((s) => s.gradePoint)
     .filter((x) => x !== null && x !== undefined);
   if (pts.length === 0) return null;
-  const rawSgpa = pts.reduce((a, b) => a + b, 0) / pts.length;
-  return parseFloat(rawSgpa.toFixed(2));
-}
-
-function isDoubleMinor(subjectName: string | null) {
-  if (!subjectName) return false;
-  return subjectName.toUpperCase().includes("25DM");
+  return Math.round((pts.reduce((a, b) => a + b, 0) / pts.length) * 100) / 100;
 }
 
 function absoluteUrl(href: string | undefined) {
@@ -200,8 +194,8 @@ export async function POST(req: Request) {
           url,
           subjectName,
           marks: markCells,
-          totalObt: parseFloat(totalObt.toFixed(2)),
-          totalMax: parseFloat(totalMax.toFixed(2)),
+          totalObt,
+          totalMax,
           percentage,
           grade,
           gradePoint,
@@ -211,23 +205,16 @@ export async function POST(req: Request) {
       }
     }
 
-    // FILTER OUT DOUBLE MINOR SUBJECTS
-    const filteredSubjects = subjects.filter(
-      (s) => !isDoubleMinor(s.subjectName)
-    );
-
     // 7) TOTALS
-    const totalMarksAll = parseFloat(
-      filteredSubjects
-        .reduce((a: number, s: any) => a + (s.totalObt || 0), 0)
-        .toFixed(2)
+    const totalMarksAll = subjects.reduce(
+      (a: number, s: any) => a + (s.totalObt || 0),
+      0
     );
-    const maxMarksAll = parseFloat(
-      filteredSubjects
-        .reduce((a: number, s: any) => a + (s.totalMax || 0), 0)
-        .toFixed(2)
+    const maxMarksAll = subjects.reduce(
+      (a: number, s: any) => a + (s.totalMax || 0),
+      0
     );
-    const sgpa = computeSGPA(filteredSubjects);
+    const sgpa = computeSGPA(subjects);
 
     await browser.close();
 
@@ -236,7 +223,7 @@ export async function POST(req: Request) {
       estimatedCgpa: sgpa,
       totalMarksAll,
       maxMarksAll,
-      subjects: filteredSubjects,
+      subjects,
     });
   } catch (err: any) {
     if (browser) await browser.close();

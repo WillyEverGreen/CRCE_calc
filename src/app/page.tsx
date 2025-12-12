@@ -446,14 +446,14 @@ export default function Home() {
           {/* Footer & Disclaimer */}
           <div className="mt-4 pb-6 text-center space-y-2">
             <p className="text-xs text-gray-400 font-medium">
-              Note: This is an estimated SGPA, official results may vary
+            Note: This SGPA is an estimate (±0.1). Official results may differ.
             </p>
             <p
               className={`text-xs font-medium ${
                 isDarkMode ? "text-gray-500" : "text-gray-400"
               }`}
             >
-              Made with 💚 by Project Cell
+              Made with 💚 by Sai Balkawade
             </p>
           </div>
         </div>
