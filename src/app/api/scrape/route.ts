@@ -112,11 +112,10 @@ export async function POST(req: Request) {
 
         // Wait for table (reduced timeout for speed)
         try {
-          await page.waitForSelector('table.cn-cie-table, table.uk-table', { timeout: 5000 });
+          await page.waitForSelector('table.cn-cie-table, table.uk-table', { timeout: 3000 });
         } catch (e) {
           // Continue anyway
         }
-        await page.waitForTimeout(200);
 
         const subjectHtml = await page.content();
         const $$ = load(subjectHtml);
@@ -138,7 +137,6 @@ export async function POST(req: Request) {
         // Skip 25DM subjects
         if (subjectName && subjectName.includes("25DM")) {
           await page.goBack({ waitUntil: "domcontentloaded" });
-          await page.waitForTimeout(200);
           continue;
         }
 
@@ -154,7 +152,6 @@ export async function POST(req: Request) {
 
         if (parsed.length === 0) {
           await page.goBack({ waitUntil: "domcontentloaded" });
-          await page.waitForTimeout(200);
           continue;
         }
 
@@ -181,12 +178,10 @@ export async function POST(req: Request) {
         });
 
         await page.goBack({ waitUntil: "domcontentloaded" });
-        await page.waitForTimeout(200);
 
       } catch (err: any) {
         try {
           await page.goBack({ waitUntil: "domcontentloaded" });
-          await page.waitForTimeout(200);
         } catch (e) {
           // Ignore
         }
