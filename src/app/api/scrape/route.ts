@@ -116,12 +116,11 @@ export async function POST(req: Request) {
         }
 
         const cieLinks = await page.$$('a[href*="task=ciedetails"]');
-        const totalSubjects = cieLinks.length;
         const subjects: any[] = [];
 
         for (let i = 0; i < cieLinks.length; i++) {
           try {
-            sendProgress(`Fetching subject ${i + 1} of ${totalSubjects}...`, i + 1, totalSubjects);
+            sendProgress(`Fetching subject ${i + 1}...`, i + 1, cieLinks.length);
             
             const links = await page.$$('a[href*="task=ciedetails"]');
             if (i >= links.length) continue;
