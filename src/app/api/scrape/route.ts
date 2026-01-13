@@ -108,7 +108,7 @@ export async function POST(req: Request) {
           browser = await playwright.launch({
             args: chromium.args,
             executablePath: await chromium.executablePath(),
-            headless: chromium.headless === "shell" ? true : chromium.headless,
+            headless: true,
           });
         } else {
           browser = await playwright.launch({
