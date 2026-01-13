@@ -1,5 +1,5 @@
 import { chromium as playwright } from "playwright-core";
-import chromium from "@sparticuz/chromium";
+import chromium from "@sparticuz/chromium-min";
 import { load } from "cheerio";
 
 export const maxDuration = 60;
@@ -105,9 +105,12 @@ export async function POST(req: Request) {
         sendProgress("Launching browser...");
         
         if (process.env.NODE_ENV === "production") {
+          const executablePath = await chromium.executablePath(
+            `https://github.com/Sparticuz/chromium/releases/download/v131.0.1/chromium-v131.0.1-pack.tar`
+          );
           browser = await playwright.launch({
             args: chromium.args,
-            executablePath: await chromium.executablePath(),
+            executablePath,
             headless: true,
           });
         } else {
