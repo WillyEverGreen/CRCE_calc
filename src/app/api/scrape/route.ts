@@ -19,6 +19,7 @@ interface Subject {
   percentage: number | null;
   grade: string;
   gradePoint: number | null;
+  credits?: number;
 }
 
 interface Result {
@@ -57,10 +58,38 @@ function parseMark(raw: string | null): Mark | null {
   return null;
 }
 
+const getCredits = (subjectName: string): number => {
+  const match = subjectName.match(/\(([^)]+)\)/);
+  if (!match) return 2; // Default to 2 if no code found
+  const code = match[1];
+
+  if (code.includes("25BSC12CE05")) return 2;
+  if (code.includes("25PCC12CE05")) return 3;
+  if (code.includes("25PCC12CE06")) return 4;
+  if (code.includes("25PCC12CE07")) return 1;
+  if (code.includes("25OE")) return 2;
+  if (code.includes("25MDM")) return 2;
+  if (code.includes("25AEC")) return 2;
+  if (code.includes("25VEC")) return 2;
+  if (code.includes("25CEP")) return 2;
+  
+  return 2; // Default fallback
+};
+
 function computeSGPA(subjects: Subject[]): number | null {
-  const pts = subjects.map((s) => s.gradePoint).filter((x): x is number => x !== null && x !== undefined);
-  if (pts.length === 0) return null;
-  return Math.round((pts.reduce((a, b) => a + b, 0) / pts.length) * 100) / 100;
+  let totalPoints = 0;
+  let totalCredits = 0;
+
+  for (const s of subjects) {
+    if (s.gradePoint !== null && s.gradePoint !== undefined) {
+      const credits = s.credits || getCredits(s.subjectName);
+      totalPoints += s.gradePoint * credits;
+      totalCredits += credits;
+    }
+  }
+
+  if (totalCredits === 0) return null;
+  return Math.round((totalPoints / totalCredits) * 100) / 100;
 }
 
 export async function POST(req: Request) {
@@ -226,6 +255,7 @@ export async function POST(req: Request) {
               percentage,
               grade,
               gradePoint,
+              credits: getCredits(subjectName),
             });
 
             await page.goBack({ waitUntil: "domcontentloaded" });
