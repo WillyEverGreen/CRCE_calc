@@ -240,14 +240,14 @@ export default function About() {
                   isDarkMode ? "text-gray-400" : "text-gray-600"
                 }`}
               >
-                We use the standard SGPA calculation method where grades are converted to points.
+                We use the credit-weighted SGPA calculation method where grades are converted to points based on course credits.
               </p>
               <div
                 className={`p-4 rounded-xl font-mono text-xs ${
                   isDarkMode ? "bg-[#0f172a] text-emerald-400" : "bg-gray-50 text-emerald-700"
                 }`}
               >
-                SGPA = Σ (Grade Points) / Number of Subjects
+                SGPA = Σ (Grade Points × Credits) / Σ Credits
               </div>
               <p
                 className={`text-xs mt-3 ${
