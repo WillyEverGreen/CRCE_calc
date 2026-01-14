@@ -188,10 +188,24 @@ export async function POST(req: Request) {
 
         sendProgress("🌐 Launching browser...");
         
-        // Use local Playwright (fast on Render.com)
+        // Use local Playwright with aggressive memory optimization
         browser = await chromium.launch({ 
           headless: true,
-          args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+          args: [
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu',
+            '--disable-software-rasterizer',
+            '--disable-extensions',
+            '--disable-background-networking',
+            '--disable-default-apps',
+            '--disable-sync',
+            '--disable-translate',
+            '--disable-features=site-per-process',
+            '--no-first-run',
+            '--no-zygote'
+          ]
         });
         
         const context = await browser.newContext({ 
@@ -201,7 +215,12 @@ export async function POST(req: Request) {
 
         await page.route("**/*", (route) => {
           const type = route.request().resourceType();
-          if (["image", "stylesheet", "font", "media"].includes(type)) return route.abort();
+          if ([
+            "image", "stylesheet", "font", "media",
+            "websocket", "manifest", "other"
+          ].includes(type)) {
+            return route.abort();
+          }
           route.continue();
         });
 
