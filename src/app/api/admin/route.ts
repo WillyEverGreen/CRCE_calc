@@ -26,14 +26,18 @@ export async function GET(req: NextRequest) {
       cacheHits,
       recentUsers,
       queueCurrent,
-      activeCount
+      activeCount,
+      uniqueUsersTotal,
+      uniqueUsersToday
     ] = await Promise.all([
       redis?.get("stats:total") || 0,
       redis?.get(`stats:daily:${today}`) || 0,
       redis?.get("stats:cache_hits") || 0,
       redis?.lrange("stats:recent_users", 0, 49) || [],
       redis?.lrange("queue:current", 0, -1) || [],
-      redis?.get("queue:active") || 0
+      redis?.get("queue:active") || 0,
+      redis?.scard("stats:unique_users") || 0,          // Count of unique PRNs (all time)
+      redis?.scard(`stats:unique_daily:${today}`) || 0  // Count of unique PRNs today
     ]);
 
     // Parse recent users for branch distribution
@@ -59,12 +63,14 @@ export async function GET(req: NextRequest) {
         cacheHits: Number(cacheHits),
         cacheHitRate: Number(totalRequests) > 0 
           ? Math.round((Number(cacheHits) / Number(totalRequests)) * 100) 
-          : 0
+          : 0,
+        uniqueUsers: Number(uniqueUsersTotal),      // NEW: Total unique users
+        uniqueUsersToday: Number(uniqueUsersToday)  // NEW: Unique users today
       },
       queue: {
         active: Number(activeCount),
         waiting: (queueCurrent as string[]).map(p => maskPRN(p)),
-        maxConcurrent: 2
+        maxConcurrent: 4  // Updated to match new MAX_CONCURRENT
       },
       recentUsers: userList.slice(0, 20),
       branchDistribution: branchCounts,

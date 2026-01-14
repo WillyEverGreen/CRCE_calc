@@ -10,6 +10,8 @@ interface AdminStats {
     todayRequests: number;
     cacheHits: number;
     cacheHitRate: number;
+    uniqueUsers: number;       // NEW
+    uniqueUsersToday: number;  // NEW
   };
   queue: {
     active: number;
@@ -162,7 +164,7 @@ function AdminContent() {
             </div>
 
             {/* Stats Row */}
-            <div className="grid grid-cols-4 gap-3 mt-6">
+            <div className="grid grid-cols-3 gap-3 mt-6">
               <div className="bg-white/20 rounded-2xl p-4 backdrop-blur-sm text-center">
                 <div className="text-3xl font-bold">{data.stats.totalRequests}</div>
                 <div className="text-xs text-emerald-100 mt-1">Total Requests</div>
@@ -172,12 +174,20 @@ function AdminContent() {
                 <div className="text-xs text-emerald-100 mt-1">Today</div>
               </div>
               <div className="bg-white/20 rounded-2xl p-4 backdrop-blur-sm text-center">
-                <div className="text-3xl font-bold">{data.stats.cacheHits}</div>
-                <div className="text-xs text-emerald-100 mt-1">Cache Hits</div>
-              </div>
-              <div className="bg-white/20 rounded-2xl p-4 backdrop-blur-sm text-center">
                 <div className="text-3xl font-bold">{data.stats.cacheHitRate}%</div>
                 <div className="text-xs text-emerald-100 mt-1">Cache Rate</div>
+              </div>
+            </div>
+            
+            {/* Unique Users Row */}
+            <div className="grid grid-cols-2 gap-3 mt-3">
+              <div className="bg-emerald-400/30 rounded-2xl p-4 backdrop-blur-sm text-center border border-emerald-300/30">
+                <div className="text-3xl font-bold">👥 {data.stats.uniqueUsers}</div>
+                <div className="text-xs text-emerald-100 mt-1">Unique Users (All Time)</div>
+              </div>
+              <div className="bg-emerald-400/30 rounded-2xl p-4 backdrop-blur-sm text-center border border-emerald-300/30">
+                <div className="text-3xl font-bold">🆕 {data.stats.uniqueUsersToday}</div>
+                <div className="text-xs text-emerald-100 mt-1">Unique Users Today</div>
               </div>
             </div>
           </div>

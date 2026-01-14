@@ -12,6 +12,12 @@ const redis = process.env.UPSTASH_REDIS_REST_URL ? new Redis({
   token: process.env.UPSTASH_REDIS_REST_TOKEN!,
 }) : null;
 
+// Log Redis status on startup
+console.log(`[Redis] Status: ${redis ? 'CONNECTED' : 'NOT CONFIGURED (caching disabled)'}`);
+if (!redis) {
+  console.log('[Redis] Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN to enable caching');
+}
+
 const CACHE_TTL = 60 * 60 * 6; // 6 hours (fresher data)
 
 // ---------------------- ANALYTICS ----------------------
@@ -24,7 +30,9 @@ async function trackAnalytics(prn: string, isCacheHit: boolean) {
       redis.incr(`stats:daily:${today}`),
       isCacheHit ? redis.incr("stats:cache_hits") : Promise.resolve(),
       redis.lpush("stats:recent_users", prn),
-      redis.ltrim("stats:recent_users", 0, 99) // Keep last 100
+      redis.ltrim("stats:recent_users", 0, 99), // Keep last 100
+      redis.sadd("stats:unique_users", prn),    // Track unique PRNs (Set = no duplicates)
+      redis.sadd(`stats:unique_daily:${today}`, prn) // Unique users today
     ]);
   } catch (e) {
     // Analytics error shouldn't break the app
