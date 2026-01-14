@@ -14,24 +14,59 @@ const redis = process.env.UPSTASH_REDIS_REST_URL ? new Redis({
 
 const CACHE_TTL = 60 * 60 * 6; // 6 hours (fresher data)
 
+// ---------------------- ANALYTICS ----------------------
+async function trackAnalytics(prn: string, isCacheHit: boolean) {
+  if (!redis) return;
+  try {
+    const today = new Date().toISOString().split("T")[0];
+    await Promise.all([
+      redis.incr("stats:total"),
+      redis.incr(`stats:daily:${today}`),
+      isCacheHit ? redis.incr("stats:cache_hits") : Promise.resolve(),
+      redis.lpush("stats:recent_users", prn),
+      redis.ltrim("stats:recent_users", 0, 99) // Keep last 100
+    ]);
+  } catch (e) {
+    // Analytics error shouldn't break the app
+  }
+}
+
 // ---------------------- QUEUE ----------------------
 let activeRequests = 0;
-const MAX_CONCURRENT = 2; // Browserless free tier limit
+const MAX_CONCURRENT = 1; // Set to 1 for testing queue, change to 2+ for production
 const queue: Array<() => void> = [];
+
+// Sync queue state to Redis for admin panel
+async function syncQueueToRedis(prn?: string, action?: 'add' | 'remove') {
+  if (!redis) return;
+  try {
+    await redis.set("queue:active", activeRequests);
+    if (prn && action === 'add') {
+      await redis.lpush("queue:waiting", prn);
+    } else if (prn && action === 'remove') {
+      await redis.lrem("queue:waiting", 1, prn);
+    }
+  } catch (e) {
+    // Ignore sync errors
+  }
+}
 
 async function acquireSlot(): Promise<void> {
   if (activeRequests < MAX_CONCURRENT) {
     activeRequests++;
+    await syncQueueToRedis();
     return;
   }
   return new Promise(resolve => queue.push(() => {
     activeRequests++;
+    syncQueueToRedis();
     resolve();
   }));
 }
 
-function releaseSlot(): void {
+async function releaseSlot(): Promise<void> {
   activeRequests--;
+  await syncQueueToRedis();
   if (queue.length > 0) {
     const next = queue.shift();
     next?.();
@@ -94,6 +129,7 @@ export async function POST(req: Request) {
         try {
           const cached = await redis.get(cacheKey);
           if (cached) {
+            await trackAnalytics(prn, true); // Track cache hit
             sendProgress("✅ Retrieved from cache (instant!) - Use 'Refresh' button for latest data");
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "result", data: cached, fromCache: true })}\n\n`));
             controller.close();
@@ -108,13 +144,37 @@ export async function POST(req: Request) {
         sendProgress("🔄 Fetching fresh data (ignoring cache)...");
       }
 
-      // Queue management
-      const queuePos = getQueuePosition();
+      // Queue management with dynamic updates
       if (activeRequests >= MAX_CONCURRENT) {
-        sendProgress(`⏳ You're #${queuePos} in queue. Estimated wait: ${queuePos * 30} seconds...`);
+        let myPosition = queue.length + 1;
+        sendProgress(`⏳ You're #${myPosition} in queue...`);
+        await syncQueueToRedis(prn, 'add');
+        
+        // Wait for slot with dynamic position updates
+        await new Promise<void>(resolve => {
+          const myCallback = () => {
+            clearInterval(checkInterval);
+            activeRequests++;
+            syncQueueToRedis(prn, 'remove');
+            resolve();
+          };
+          
+          queue.push(myCallback);
+          
+          // Update position every 3 seconds
+          const checkInterval = setInterval(() => {
+            const newPosition = queue.indexOf(myCallback) + 1;
+            if (newPosition > 0 && newPosition !== myPosition) {
+              myPosition = newPosition;
+              sendProgress(`⏳ You're #${myPosition} in queue...`);
+            }
+          }, 3000);
+        });
+      } else {
+        activeRequests++;
+        await syncQueueToRedis();
       }
       
-      await acquireSlot();
       sendProgress("🚀 Processing your request...");
 
       let browser: Browser | undefined;
@@ -248,6 +308,7 @@ export async function POST(req: Request) {
         if (redis) {
           try {
             await redis.set(cacheKey, result, { ex: CACHE_TTL });
+            await trackAnalytics(prn, false); // Track fresh scrape
             sendProgress("💾 Result cached for faster access next time!");
           } catch (e) {
             // Cache save failed, continue anyway
