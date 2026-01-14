@@ -97,6 +97,7 @@ export async function DELETE(req: NextRequest) {
       redis.del("stats:total"),
       redis.del("stats:cache_hits"),
       redis.del("stats:recent_users"),
+      redis.del("stats:unique_users"),  // Clear unique users (all time)
       redis.del("queue:active"),
       redis.del("queue:waiting")
     ]);
@@ -106,10 +107,12 @@ export async function DELETE(req: NextRequest) {
     for (let i = 0; i < 30; i++) {
       const date = new Date(today);
       date.setDate(date.getDate() - i);
-      await redis.del(`stats:daily:${date.toISOString().split("T")[0]}`);
+      const dateStr = date.toISOString().split("T")[0];
+      await redis.del(`stats:daily:${dateStr}`);
+      await redis.del(`stats:unique_daily:${dateStr}`);  // Clear unique users daily
     }
 
-    return Response.json({ success: true, message: "All data cleared" });
+    return Response.json({ success: true, message: "All data cleared (including unique users)" });
   } catch (error: any) {
     return Response.json({ error: error.message }, { status: 500 });
   }

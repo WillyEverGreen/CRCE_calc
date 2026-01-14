@@ -130,23 +130,23 @@ function AdminContent() {
         {/* Header Card */}
         <div className={`rounded-[30px] shadow-2xl overflow-hidden mb-6 ${isDarkMode ? "bg-emerald-900" : "bg-emerald-600"}`}>
           <div className="p-6 text-white">
-            <div className="flex justify-between items-start">
+            <div className="flex flex-col md:flex-row justify-between items-start gap-4">
               <div>
                 <h1 className="text-2xl font-bold tracking-wide">Admin Panel</h1>
                 <p className={`text-sm mt-1 ${isDarkMode ? "text-emerald-400" : "text-emerald-200"}`}>
                   CRCE Results Dashboard
                 </p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
                 <button
                   onClick={clearCache}
-                  className="bg-yellow-500/80 hover:bg-yellow-600 text-white text-sm px-3 py-1.5 rounded-full transition-all"
+                  className="flex-1 md:flex-none bg-yellow-500/80 hover:bg-yellow-600 text-white text-sm px-3 py-1.5 rounded-full transition-all text-center whitespace-nowrap"
                 >
                   Clear Cache
                 </button>
                 <button
                   onClick={clearData}
-                  className="bg-red-500/80 hover:bg-red-600 text-white text-sm px-3 py-1.5 rounded-full transition-all"
+                  className="flex-1 md:flex-none bg-red-500/80 hover:bg-red-600 text-white text-sm px-3 py-1.5 rounded-full transition-all text-center whitespace-nowrap"
                 >
                   Clear Stats
                 </button>
@@ -156,7 +156,7 @@ function AdminContent() {
                 >
                   {isDarkMode ? "☀️" : "🌙"}
                 </button>
-                <div className="text-right text-sm">
+                <div className="text-right text-sm ml-auto md:ml-0">
                   <div className="text-emerald-200">Live</div>
                   <div className="font-bold">{new Date(data.serverTime).toLocaleTimeString()}</div>
                 </div>
@@ -199,7 +199,7 @@ function AdminContent() {
             <span className={`w-3 h-3 rounded-full ${data.queue.active > 0 ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></span>
             Live Queue
           </h2>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className={`rounded-2xl p-4 text-center ${isDarkMode ? "bg-[#0f172a]" : "bg-gray-50"}`}>
               <div className="text-3xl font-bold text-emerald-500">{data.queue.active}</div>
               <div className={`text-sm mt-1 ${isDarkMode ? "text-gray-400" : "text-gray-500"}`}>Active</div>
@@ -229,9 +229,9 @@ function AdminContent() {
           <h2 className={`text-lg font-bold mb-4 ${isDarkMode ? "text-white" : "text-gray-800"}`}>
             Recent Users
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 max-h-64 overflow-y-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 max-h-64 overflow-y-auto">
             {data.recentUsers.length === 0 ? (
-              <div className={`col-span-4 text-center py-4 ${isDarkMode ? "text-gray-500" : "text-gray-400"}`}>
+              <div className={`col-span-1 sm:col-span-2 md:col-span-4 text-center py-4 ${isDarkMode ? "text-gray-500" : "text-gray-400"}`}>
                 No users yet
               </div>
             ) : (
