@@ -76,8 +76,9 @@ export async function GET(req: NextRequest) {
       branchDistribution: branchCounts,
       serverTime: new Date().toISOString()
     });
-  } catch (error: any) {
-    return Response.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return Response.json({ error: message }, { status: 500 });
   }
 }
 
@@ -113,8 +114,9 @@ export async function DELETE(req: NextRequest) {
     }
 
     return Response.json({ success: true, message: "All data cleared (including unique users)" });
-  } catch (error: any) {
-    return Response.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return Response.json({ error: message }, { status: 500 });
   }
 }
 
@@ -148,8 +150,9 @@ export async function POST(req: NextRequest) {
     } while (cursor !== 0);
 
     return Response.json({ success: true, message: `Cleared ${deletedCount} cached results` });
-  } catch (error: any) {
-    return Response.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    return Response.json({ error: message }, { status: 500 });
   }
 }
 

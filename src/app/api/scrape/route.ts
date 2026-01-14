@@ -381,14 +381,20 @@ export async function POST(req: Request) {
             await redis.set(cacheKey, result, { ex: CACHE_TTL });
             await trackAnalytics(prn, false); // Track fresh scrape
             sendProgress("💾 Result cached for faster access next time!");
-          } catch (e) {
+          } catch {
             // Cache save failed, continue anyway
           }
         }
 
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "result", data: result })}\n\n`));
-      } catch (err: any) {
-        let errorMessage = err?.message || "Unknown error occurred";
+      } catch (err: unknown) {
+        let errorMessage = "Unknown error occurred";
+        
+        if (err instanceof Error) {
+          errorMessage = err.message;
+        } else if (typeof err === "string") {
+          errorMessage = err;
+        }
         
         // Handle various crash/error scenarios
         if (errorMessage.includes("Target closed") || 

@@ -52,7 +52,7 @@ function AdminContent() {
       const json = await res.json();
       setData(json);
       setError(null);
-    } catch (e) {
+    } catch {
       setError("Failed to connect to server");
     }
     setLoading(false);
@@ -76,7 +76,7 @@ function AdminContent() {
       } else {
         alert("Failed to clear data");
       }
-    } catch (e) {
+    } catch {
       alert("Error clearing data");
     }
   };
@@ -94,7 +94,7 @@ function AdminContent() {
       } else {
         alert("Failed to clear cache");
       }
-    } catch (e) {
+    } catch {
       alert("Error clearing cache");
     }
   };

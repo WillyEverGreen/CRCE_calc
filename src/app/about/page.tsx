@@ -110,34 +110,7 @@ const EmailIcon = () => (
 
 
 
-// Tech Stack Icons
-const NextJsIcon = () => (
-  <svg viewBox="0 0 180 180" width="24" height="24" fill="currentColor">
-    <path
-      fillRule="evenodd"
-      clipRule="evenodd"
-      d="M128.182 180C156.805 180 180 156.805 180 128.182V51.8182C180 23.1955 156.805 0 128.182 0H51.8182C23.1955 0 0 23.1955 0 51.8182V128.182C0 156.805 23.1955 180 51.8182 180H128.182ZM108.318 41.5455C108.318 36.6502 112.287 32.6818 117.182 32.6818H126.545C131.441 32.6818 135.409 36.6502 135.409 41.5455V138.455C135.409 143.35 131.441 147.318 126.545 147.318H117.182C112.287 147.318 108.318 143.35 108.318 138.455V84.0909L65.9462 139.172C63.8122 141.947 60.5229 143.591 57.0227 143.591H51.8182C46.9229 143.591 42.9545 139.622 42.9545 134.727V41.5455C42.9545 36.6502 46.9229 32.6818 51.8182 32.6818H61.1818C66.0771 32.6818 70.0455 36.6502 70.0455 41.5455V95.9091L112.417 40.8282C114.551 38.0535 117.841 36.4091 121.341 36.4091H126.545H108.318V41.5455Z"
-    />
-  </svg>
-);
 
-const TypeScriptIcon = () => (
-  <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
-    <path d="M1.125 0C0.502 0 0 0.502 0 1.125v21.75C0 23.498 0.502 24 1.125 24h21.75c0.623 0 1.125-0.502 1.125-1.125V1.125C24 0.502 23.498 0 22.875 0H1.125zM11.5 16h-1.5v-6.5h-2v-1.5h5.5v1.5h-2V16zm6.5 0h-1.5v-1.5c-0.5 0.75-1.25 1.75-2.5 1.75-1.5 0-2.5-1-2.5-3v-5.25h1.5v4.75c0 1 0.5 1.75 1.5 1.75 0.75 0 1.5-0.5 1.5-1.25v-5.25h1.5V16z" />
-  </svg>
-);
-
-const TailwindIcon = () => (
-  <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
-    <path d="M12.001,4.8c-3.2,0-5.2,1.6-6,4.8c1.2-1.6,2.6-2.2,4.2-1.8c0.913,0.228,1.565,0.89,2.288,1.624 C13.666,10.618,15.027,12,18.001,12c3.2,0,5.2-1.6,6-4.8c-1.2,1.6-2.6,2.2-4.2,1.8c-0.913-0.228-1.565-0.89-2.288-1.624 C16.337,6.182,14.976,4.8,12.001,4.8z M6.001,12c-3.2,0-5.2,1.6-6,4.8c1.2-1.6,2.6-2.2,4.2-1.8c0.913,0.228,1.565,0.89,2.288,1.624 c1.177,1.194,2.538,2.576,5.512,2.576c3.2,0,5.2-1.6,6-4.8c-1.2,1.6-2.6,2.2-4.2,1.8c-0.913-0.228-1.565-0.89-2.288-1.624 C10.337,13.382,8.976,12,6.001,12z" />
-  </svg>
-);
-
-const PlaywrightIcon = () => (
-  <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
-    <path d="M20.31 16.6c-1.4 1.1-2.8 1.4-4.2 1.4-2.3 0-4.3-1.1-5.6-2.9l-4.8-6.6C4.6 7 3.1 5.5 1.5 4.5c-1-.6-1.5-1.5-1.5-2.5 0-1.1.9-2 2-2 1.5 0 2.9.7 4 1.8l5.6 5.6c1.1 1.1 2.5 1.8 4 1.8 1.5 0 2.9-.7 4-1.8l1.4-1.4c.5-.5 1.3-.5 1.8 0 .5.5.5 1.3 0 1.8l-1.4 1.4c-1.9 1.9-4.5 2.9-7.1 2.9-1.8 0-3.5-.5-5.1-1.4l-3.3-1.9c-.9-.5-2.1-.2-2.6.7-.5.9-.2 2.1.7 2.6l3.3 1.9c2.3 1.3 4.9 2 7.6 2 3.8 0 7.4-1.5 10.1-4.2l1.4-1.4c.5-.5 1.3-.5 1.8 0 .5.5.5 1.3 0 1.8l-1.4 1.4z" />
-  </svg>
-);
 
 export default function About() {
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -279,7 +252,13 @@ export default function About() {
                       : "bg-emerald-50 text-emerald-700"
                   }`}
                 >
-                  <NextJsIcon /> Next.js
+                  <Image 
+                    src="https://img.icons8.com/color/48/nextjs.png" 
+                    alt="Next.js" 
+                    width={28} 
+                    height={28} 
+                    className="object-contain"
+                  /> Next.js
                 </div>
                 <div
                   className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium ${
@@ -288,7 +267,13 @@ export default function About() {
                       : "bg-emerald-50 text-emerald-700"
                   }`}
                 >
-                  <TypeScriptIcon /> TypeScript
+                  <Image 
+                    src="https://img.icons8.com/color/48/typescript.png" 
+                    alt="TypeScript" 
+                    width={28} 
+                    height={28} 
+                    className="object-contain"
+                  /> TypeScript
                 </div>
                 <div
                   className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium ${
@@ -297,7 +282,13 @@ export default function About() {
                       : "bg-emerald-50 text-emerald-700"
                   }`}
                 >
-                  <TailwindIcon /> Tailwind
+                  <Image 
+                    src="https://img.icons8.com/color/48/tailwindcss.png" 
+                    alt="Tailwind" 
+                    width={28} 
+                    height={28} 
+                    className="object-contain"
+                  /> Tailwind
                 </div>
                 <div
                   className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium ${
@@ -306,7 +297,13 @@ export default function About() {
                       : "bg-emerald-50 text-emerald-700"
                   }`}
                 >
-                  <PlaywrightIcon /> Playwright
+                  <Image 
+                    src="/playwright.png" 
+                    alt="Playwright" 
+                    width={28} 
+                    height={28} 
+                    className="object-contain"
+                  /> Playwright
                 </div>
               </div>
             </div>
@@ -319,17 +316,12 @@ export default function About() {
             >
               <div className="flex items-center gap-4 mb-3">
                 <div className="w-12 h-12 relative rounded-full overflow-hidden bg-white border-2 border-black">
-                  <img 
+                  <Image 
                     alt="Project Cell CRCE Logo" 
-                    loading="lazy" 
-                    width="64" 
-                    height="64" 
-                    decoding="async"
-                    data-nimg="1"
+                    width={64} 
+                    height={64} 
                     className="w-full h-full object-cover"
-                    srcSet="/_next/image?url=%2Fcir_logo.jpeg&w=64&q=75 1x, /_next/image?url=%2Fcir_logo.jpeg&w=128&q=75 2x" 
-                    src="/_next/image?url=%2Fcir_logo.jpeg&w=128&q=75"
-                    style={{ color: "transparent" }}
+                    src="/cir_logo.jpeg"
                   />
                 </div>
                 <div>
