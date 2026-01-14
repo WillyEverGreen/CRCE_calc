@@ -7,9 +7,9 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies (including Playwright browsers)
-# We don't need 'npx playwright install' separately because the base image has them, 
-# but ensuring 'playwright' package is installed is key.
-RUN npm ci
+# Using npm install instead of npm ci to handle platform-specific dependencies
+# that may not be in the Windows-generated lockfile
+RUN npm install --omit=dev
 
 # Copy source code
 COPY . .
