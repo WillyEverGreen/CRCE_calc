@@ -1,0 +1,207 @@
+{
+  "HIEC501": {
+    "credit": 4.0,
+    "name": "Transport Infrastructure",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HIEC601": {
+    "credit": 4.0,
+    "name": "Energy and IT Infrastructure",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HIEC701": {
+    "credit": 4.0,
+    "name": "Geographic Information Systems",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HIESBL701": {
+    "credit": 2.0,
+    "name": "Geographic Information System \u2013 Lab",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HIEC801": {
+    "credit": 4.0,
+    "name": "Infrastructural planning and management",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HSCC501": {
+    "credit": 4.0,
+    "name": "Smart City Planning and Development",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HSCC601": {
+    "credit": 4.0,
+    "name": "Smart City-Project Management",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HSCC701": {
+    "credit": 4.0,
+    "name": "Smart Urban Infrastructures",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HSCSBL701": {
+    "credit": 2.0,
+    "name": "Smart City-Project Management",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HSCC801": {
+    "credit": 4.0,
+    "name": "Smart Management of Smart Urban Infrastructures",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HWTSBL701": {
+    "credit": 1.0,
+    "name": "Unknown",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HWTC501": {
+    "credit": 4.0,
+    "name": "Waterways and Ports",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HWTC601": {
+    "credit": 4.0,
+    "name": "Design of Ports and Harbour structures",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HWTC701": {
+    "credit": 4.0,
+    "name": "Port and Harbour Operations and Services",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HWTC801": {
+    "credit": 4.0,
+    "name": "Construction and Management of Port and Harbour",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HPSC501": {
+    "credit": 4.0,
+    "name": "Concrete Consultant Practices",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HPSC601": {
+    "credit": 4.0,
+    "name": "Formwork Design Practices",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HPSC701": {
+    "credit": 4.0,
+    "name": "Structural Consultant Practice-1",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HPSSBL701": {
+    "credit": 2.0,
+    "name": "Structural Consultant Practice-Lab",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HPSC801": {
+    "credit": 4.0,
+    "name": "Structural Consultant Practice-II",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HGSC501": {
+    "credit": 4.0,
+    "name": "Green Technologies and Practices",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HGSC601": {
+    "credit": 4.0,
+    "name": "Green Building and Infrastructure Engineering",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HGSC701": {
+    "credit": 4.0,
+    "name": "Fundamentals of Sustainable Engineering",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HGSSBL601": {
+    "credit": 2.0,
+    "name": "Green Building and Infrastructure Engineering",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HGSC801": {
+    "credit": 4.0,
+    "name": "Sustainable Built Environment Engineering",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HCWC501": {
+    "credit": 4.0,
+    "name": "SOLID AND HAZARDOUS WASTE MANAGEMENT",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HCWC601": {
+    "credit": 4.0,
+    "name": "LIQUID EFFLUENT MANAGEMENT",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HCWC701": {
+    "credit": 4.0,
+    "name": "WASTE VALORIZATION I",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HCWSBL701": {
+    "credit": 2.0,
+    "name": "WASTE TECHNOLOGY SKILL BASED LAB",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HCWC801": {
+    "credit": 4.0,
+    "name": "WASTE VALORIZATION II",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HEVC501": {
+    "credit": 4.0,
+    "name": "Vehicular Systems and Dynamics 04 - 04 -",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HEVSBL701": {
+    "credit": 2.0,
+    "name": "Electric Vehicles Lab 04 -- 02",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HEVC801": {
+    "credit": 4.0,
+    "name": "Electric Vehicle System Design 04 - 04 -",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HMTC501": {
+    "credit": 4.0,
+    "name": "Futuristic Power Systems 04 - 04 -",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HMTSBL701": {
+    "credit": 2.0,
+    "name": "Microgrid and RES Lab -- 04 -- 02",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HMTC801": {
+    "credit": 4.0,
+    "name": "Microgrid System Design 04 - 04 -",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HRBC501": {
+    "credit": 4.0,
+    "name": "Industrial Robotics",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HRBC601": {
+    "credit": 4.0,
+    "name": "Mechatronics & IoT",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HRBC701": {
+    "credit": 4.0,
+    "name": "Artificial Intelligence and Data Analytics",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HRBSBL701": {
+    "credit": 2.0,
+    "name": "Robotics and Automation Lab",
+    "source": "doc_4581391945733888438.pdf"
+  },
+  "HRBC801": {
+    "credit": 4.0,
+    "name": "Autonomous Vehicle Systems",
+    "source": "doc_4581391945733888438.pdf"
+  }
+}

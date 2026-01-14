@@ -129,7 +129,7 @@ export default function Home() {
     setError(null);
     setResult(null);
     setFromCache(false);
-    setLoadingMessage(forceRefresh ? "Refreshing..." : "Starting...");
+    setLoadingMessage(forceRefresh ? "Refreshing..." : "Connecting...");
 
     try {
       // Use fetch with streaming for real-time progress
@@ -399,16 +399,26 @@ export default function Home() {
                     <button
                       type="submit"
                       disabled={loading}
-                      className={`w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-2xl shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-2 mt-4 ${
-                      isDarkMode ? "shadow-emerald-900/20" : "shadow-emerald-200"
-                    } ${loading ? "opacity-90 cursor-wait" : ""}`}
+                      className={`w-full font-bold py-4 rounded-2xl shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-2 mt-4 
+                        ${loading ? "opacity-90 cursor-wait" : ""}
+                        ${loadingMessage.toLowerCase().includes("queue") 
+                          ? "bg-yellow-600 hover:bg-yellow-700 text-white shadow-yellow-200"
+                          : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-200"
+                        }
+                        ${isDarkMode && loadingMessage.toLowerCase().includes("queue") ? "shadow-yellow-900/20" : ""}
+                        ${isDarkMode && !loadingMessage.toLowerCase().includes("queue") ? "shadow-emerald-900/20" : ""}
+                      `}
                     >
                       {loading ? (
                         <span className="flex items-center gap-2">
-                          <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
-                          </svg>
+                          {loadingMessage.toLowerCase().includes("queue") ? (
+                            <span className="text-xl animate-pulse">⏳</span>
+                          ) : (
+                            <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                            </svg>
+                          )}
                           <span>{loadingMessage}</span>
                         </span>
                       ) : (

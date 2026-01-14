@@ -33,7 +33,7 @@ async function trackAnalytics(prn: string, isCacheHit: boolean) {
 
 // ---------------------- QUEUE ----------------------
 let activeRequests = 0;
-const MAX_CONCURRENT = 1; // Set to 1 for testing queue, change to 2+ for production
+const MAX_CONCURRENT = 2; // Restored for production
 const queue: Array<() => void> = [];
 
 // Sync queue state to Redis for admin panel
@@ -317,7 +317,17 @@ export async function POST(req: Request) {
 
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "result", data: result })}\n\n`));
       } catch (err: any) {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "error", error: err.message })}\n\n`));
+        let errorMessage = err.message;
+        
+        // Handle OOM / Browser crash specific errors
+        if (errorMessage.includes("Target closed") || 
+            errorMessage.includes("Protocol error") || 
+            errorMessage.includes("browser has been closed")) {
+          console.error("Browser crash potential OOM:", errorMessage);
+          errorMessage = "Server busy (High Traffic). Please try again in 30 seconds.";
+        }
+        
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: "error", error: errorMessage })}\n\n`));
       } finally {
         if (browser) await browser.close().catch(() => {});
         releaseSlot();
