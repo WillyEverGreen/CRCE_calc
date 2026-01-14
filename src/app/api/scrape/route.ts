@@ -1,4 +1,4 @@
-import { chromium, Browser } from "playwright-core";
+import { chromium, Browser } from "playwright";
 import { load } from "cheerio";
 import { Redis } from "@upstash/redis";
 import { getCredits } from "@/lib/creditMap";
@@ -33,7 +33,7 @@ async function trackAnalytics(prn: string, isCacheHit: boolean) {
 
 // ---------------------- QUEUE ----------------------
 let activeRequests = 0;
-const MAX_CONCURRENT = 2; // Restored for production
+const MAX_CONCURRENT = 2; // Balanced for Railway free tier (512 MB RAM)
 const queue: Array<() => void> = [];
 
 // Sync queue state to Redis for admin panel

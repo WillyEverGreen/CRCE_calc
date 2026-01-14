@@ -1,3 +1,4 @@
+# Use the official Playwright image which comes with all necessary system dependencies
 FROM mcr.microsoft.com/playwright:v1.57.0-jammy
 
 WORKDIR /app
@@ -5,9 +6,10 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm install
-RUN npx playwright install chromium --with-deps
+# Install dependencies (including Playwright browsers)
+# We don't need 'npx playwright install' separately because the base image has them, 
+# but ensuring 'playwright' package is installed is key.
+RUN npm ci
 
 # Copy source code
 COPY . .
