@@ -47,8 +47,8 @@ async function trackAnalytics(prn: string, isCacheHit: boolean) {
 
 // ---------------------- QUEUE ----------------------
 let activeRequests = 0;
-const MAX_CONCURRENT = 4; // Increased! Early browser close = lower memory per request
-const MAX_QUEUE = 12; // Proportionally increased with MAX_CONCURRENT
+const MAX_CONCURRENT = 2; // Reduced back - 4 browsers causes OOM on Render free tier
+const MAX_QUEUE = 10; // Reasonable queue for 2 concurrent
 const LOGIN_RETRIES = 2; // Retry login without spawning new browser
 const queue: Array<() => void> = [];
 
@@ -591,7 +591,7 @@ export async function POST(req: Request) {
           }
         }
 
-        sendProgress(`🚀 Parallel fetching ${subjectUrls.length} subjects via HTTP...`);
+        sendProgress(`📚 Fetching your ${subjectUrls.length} subjects...`);
 
         // Helper: fetch and parse one subject with timeout
         async function fetchSubject(url: string): Promise<Subject | null> {
