@@ -740,9 +740,41 @@ export async function POST(req: Request) {
         if (redis) {
           try {
             await redis.set(cacheKey, result, { ex: CACHE_TTL });
-            await trackAnalytics(prn, false); // Track fresh scrape
-          } catch {
-            // Cache save failed, continue anyway
+            
+            // Leaderboard & Analytics
+            const timestamp = Date.now();
+            const branch = prn.match(/MU\d{4}(\d{2})/)?.[1] || 'unknown';
+            
+            // 1. Add to Leaderboard (Sorted Set)
+             // Only if SGPA is valid
+            if (sgpa !== null && sgpa > 0) {
+              await redis.zadd("leaderboard:sgpa", {
+                score: sgpa,
+                member: prn // Use just PRN for uniqueness
+              });
+            }
+
+            // 2. Add to Recent Users (List) with proper timestamp
+            // Store as JSON for better parsing in admin
+            const userData = JSON.stringify({
+              prn,
+              timestamp: new Date().toISOString(),
+              branch
+            });
+            await redis.lpush("stats:recent_users", userData);
+            await redis.ltrim("stats:recent_users", 0, 99); // Keep last 100
+
+            // 3. Increment counters
+            const today = new Date().toISOString().split("T")[0];
+            await Promise.all([
+              redis.incr("stats:total"),
+              redis.incr(`stats:daily:${today}`),
+              redis.sadd("stats:unique_users", prn),
+              redis.sadd(`stats:unique_daily:${today}`, prn)
+            ]);
+
+          } catch (e) {
+            console.warn("Redis stats update failed:", e);
           }
         }
 

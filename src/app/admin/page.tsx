@@ -20,6 +20,7 @@ interface AdminStats {
   };
   recentUsers: Array<{ prn: string; timestamp: string }>;
   branchDistribution: Record<string, number>;
+  leaderboard?: Array<{ rank: number; prn: string; sgpa: number; branch: string }>;
   serverTime: string;
 }
 
@@ -108,6 +109,22 @@ function AdminContent() {
       alert("Error clearing cache");
     }
   };
+
+  const clearRecentUsers = async () => {
+    if (!confirm("Clear Recet Users list?")) return;
+    try {
+      await fetch(`/api/admin?key=${key}&type=recent_users`, { method: "DELETE" });
+      triggerRefresh();
+    } catch { alert("Failed to clear"); }
+  }
+
+  const clearLeaderboard = async () => {
+    if (!confirm("Clear Leaderboard?")) return;
+    try {
+      await fetch(`/api/admin?key=${key}&type=leaderboard`, { method: "DELETE" });
+      triggerRefresh();
+    } catch { alert("Failed to clear"); }
+  }
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -289,10 +306,18 @@ function AdminContent() {
         </div>
 
         {/* Recent Users - Full Width */}
-        <div className={`rounded-[30px] shadow-xl p-6 ${isDarkMode ? "bg-[#1e293b]" : "bg-white"}`}>
-          <h2 className={`text-lg font-bold mb-4 ${isDarkMode ? "text-white" : "text-gray-800"}`}>
-            Recent Users
-          </h2>
+        <div className={`rounded-[30px] shadow-xl p-6 mb-8 ${isDarkMode ? "bg-[#1e293b]" : "bg-white"}`}>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className={`text-lg font-bold ${isDarkMode ? "text-white" : "text-gray-800"}`}>
+              Recent Users
+            </h2>
+            <button
+              onClick={clearRecentUsers}
+              className="px-3 py-1 text-xs font-bold text-red-500 bg-red-50 hover:bg-red-100 rounded-full transition-colors"
+            >
+              Clear List
+            </button>
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 max-h-64 overflow-y-auto">
             {data.recentUsers.length === 0 ? (
               <div className={`col-span-1 sm:col-span-2 md:col-span-4 text-center py-4 ${isDarkMode ? "text-gray-500" : "text-gray-400"}`}>
@@ -306,13 +331,62 @@ function AdminContent() {
                     isDarkMode ? "bg-[#0f172a]" : "bg-gray-50"
                   }`}
                 >
-                  <span className="font-mono text-emerald-500 text-xs">{user.prn}</span>
+                  <div className="flex flex-col">
+                    <span className="font-mono text-emerald-500 text-xs font-bold">{user.prn}</span>
+                    <span className={`text-[10px] ${isDarkMode ? "text-gray-500" : "text-gray-400"}`}>
+                      {new Date(user.timestamp).toLocaleString("en-IN", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        day: "numeric",
+                        month: "short"
+                      })}
+                    </span>
+                  </div>
                   <span className={`text-xs ${isDarkMode ? "text-gray-500" : "text-gray-400"}`}>#{i + 1}</span>
                 </div>
               ))
             )}
           </div>
         </div>
+
+        {/* Leaderboard Section */}
+        {data.leaderboard && data.leaderboard.length > 0 && (
+          <div className={`rounded-[30px] shadow-2xl overflow-hidden mb-8 ${isDarkMode ? "bg-emerald-900" : "bg-white"}`}>
+            <div className={`p-6 border-b flex justify-between items-center ${isDarkMode ? "border-emerald-800" : "border-gray-100"}`}>
+              <h2 className={`text-xl font-bold ${isDarkMode ? "text-white" : "text-gray-800"}`}>
+                🏆 Top Performers (Total: {data.leaderboard.length})
+              </h2>
+              <button
+                onClick={clearLeaderboard}
+                className="px-3 py-1 text-xs font-bold text-red-500 bg-red-50 hover:bg-red-100 rounded-full transition-colors"
+              >
+                Reset Leaderboard
+              </button>
+            </div>
+            <div className="max-h-[500px] overflow-y-auto p-4 space-y-2">
+              <table className="w-full text-sm">
+                <thead className={`text-xs uppercase font-semibold ${isDarkMode ? "text-emerald-400" : "text-gray-500"}`}>
+                  <tr>
+                    <th className="px-4 py-2 text-left w-20">Rank</th>
+                    <th className="px-4 py-2 text-left w-24">SGPA</th>
+                    <th className="px-4 py-2 text-left">PRN</th>
+                  </tr>
+                </thead>
+                <tbody className={`divide-y ${isDarkMode ? "divide-emerald-800" : "divide-gray-100"}`}>
+                  {data.leaderboard.map((entry, idx) => (
+                    <tr key={idx} className={`hover:bg-emerald-50/10 transition-colors`}>
+                      <td className="px-4 py-3 font-medium text-gray-400">#{entry.rank}</td>
+                      <td className="px-4 py-3 font-bold text-emerald-500 text-lg">{entry.sgpa.toFixed(2)}</td>
+                      <td className={`px-4 py-3 font-mono font-medium ${isDarkMode ? "text-gray-200" : "text-gray-700"}`}>
+                        {entry.prn}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {/* Footer */}
         <div className="mt-6 text-center">
