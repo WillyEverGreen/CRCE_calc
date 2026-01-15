@@ -246,7 +246,9 @@ export async function POST(req: Request) {
             `[${prn}] Entering queue at position ${myPosition}, activeRequests: ${activeRequests}`
           );
           sendProgress(
-            `⏳ Queue position: #${myPosition} (${activeRequests}/${MAX_CONCURRENT} browsers active)`
+            myPosition === 1 
+              ? `#1 in queue`
+              : `#${myPosition} in queue due to traffic`
           );
           await syncQueueToRedis(prn, "add");
 
@@ -291,7 +293,9 @@ export async function POST(req: Request) {
               if (newPosition > 0 && newPosition !== myPosition) {
                 myPosition = newPosition;
                 sendProgress(
-                  `⏳ Queue position: #${myPosition} (${activeRequests}/${MAX_CONCURRENT} browsers active)`
+                  newPosition === 1
+                    ? `#1 in queue` 
+                    : `#${newPosition} in queue due to traffic`
                 );
               } else if (newPosition === 0) {
                 // Callback was removed from queue but not called - error recovery
@@ -334,17 +338,39 @@ export async function POST(req: Request) {
           await syncQueueToRedis();
         }
 
-        sendProgress("🚀 Starting your request now...");
-
-        sendProgress("🚀 Processing your request...");
+        sendProgress("🚀 Your request is starting now...");
 
         const baseUrl = "https://crce-students.contineo.in/parents";
+        
+        // ===== UPFRONT VALIDATION (Fail fast) =====
+        // Validate PRN length
+        if (!prn || prn.trim().length < 10) {
+          throw new Error("Invalid PRN. PRN must be at least 10 characters.");
+        }
+        
+        // Validate DOB format
         const parts = dob.trim().split(/[-/]/);
-        if (parts.length < 3)
-          throw new Error("Invalid DOB format (DD-MM-YYYY)");
+        if (parts.length < 3) {
+          throw new Error("Invalid DOB format. Please use DD-MM-YYYY.");
+        }
         const dd = parts[0];
         const mm = parts[1];
         const yyyy = parts[2];
+        
+        const dayNum = parseInt(dd, 10);
+        const monthNum = parseInt(mm, 10);
+        const yearNum = parseInt(yyyy, 10);
+        
+        if (isNaN(dayNum) || dayNum < 1 || dayNum > 31) {
+          throw new Error("Invalid day in DOB. Day must be 1-31.");
+        }
+        if (isNaN(monthNum) || monthNum < 1 || monthNum > 12) {
+          throw new Error("Invalid month in DOB. Month must be 1-12.");
+        }
+        if (isNaN(yearNum) || yearNum < 1900 || yearNum > 2030) {
+          throw new Error("Invalid year in DOB. Year must be between 1900-2030.");
+        }
+        // ===== END VALIDATION =====
 
         sendProgress("🌐 Launching browser...");
         console.log(`[${prn}] Starting browser launch...`);
@@ -469,10 +495,22 @@ export async function POST(req: Request) {
         console.log(`[${prn}] Waiting for login response...`);
         await page.waitForTimeout(2000);
 
-        // Quick check for invalid credentials
+        // More robust credential check: Wait for navigation or explicit error
         console.log(`[${prn}] Checking credentials validity...`);
+        
+        // Wait for either: navigation away from login, or error alert
+        try {
+          await Promise.race([
+            page.waitForURL('**/dashboard**', { timeout: 8000 }),
+            page.waitForURL('**/?view=cie**', { timeout: 8000 }),
+            page.waitForSelector('.alert-error', { timeout: 8000 })
+          ]);
+        } catch {
+          // Timeout - check current state
+        }
+        
         const currentUrl = page.url();
-        const isStillOnLogin = currentUrl.includes("login");
+        const isStillOnLogin = currentUrl.includes("login") || currentUrl.endsWith("/parents/");
         const hasErrorAlert = await page
           .isVisible(".alert-error", { timeout: 500 })
           .catch(() => false);
@@ -481,8 +519,16 @@ export async function POST(req: Request) {
         console.log(`[${prn}] Still on login page: ${isStillOnLogin}`);
         console.log(`[${prn}] Has error alert: ${hasErrorAlert}`);
 
-        if (isStillOnLogin || hasErrorAlert) {
-          console.log(`[${prn}] INVALID CREDENTIALS - failing immediately`);
+        if (hasErrorAlert) {
+          console.log(`[${prn}] INVALID CREDENTIALS - error alert visible`);
+          throw new Error(
+            "Invalid credentials. Please check your PRN and Date of Birth (DD-MM-YYYY format)."
+          );
+        }
+        
+        // If still on login page, credentials are definitely wrong
+        if (isStillOnLogin) {
+          console.log(`[${prn}] INVALID CREDENTIALS - still on login page`);
           throw new Error(
             "Invalid credentials. Please check your PRN and Date of Birth (DD-MM-YYYY format)."
           );
@@ -794,7 +840,10 @@ export async function POST(req: Request) {
         console.log(`[${prn}] ERROR CAUGHT: ${errorMessage}`);
 
         // Handle various crash/error scenarios
-        if (
+        if (errorMessage.includes("Client disconnected") || errorMessage.includes("aborted")) {
+          console.log(`[${prn}] Client disconnected - not sending error`);
+          return; // Don't send error to disconnected client
+        } else if (
           errorMessage.includes("Target closed") ||
           errorMessage.includes("Protocol error") ||
           errorMessage.includes("browser has been closed") ||
@@ -810,7 +859,7 @@ export async function POST(req: Request) {
           errorMessage.includes("timeout")
         ) {
           console.error("[TIMEOUT] Navigation timeout:", errorMessage);
-          errorMessage = "Portal is slow to respond. Please try again.";
+          errorMessage = "Portal is responding slowly. Please try again in a minute.";
         } else if (
           errorMessage.includes("net::ERR") ||
           errorMessage.includes("ECONNREFUSED") ||
@@ -818,7 +867,7 @@ export async function POST(req: Request) {
         ) {
           console.error("[NETWORK] Network error:", errorMessage);
           errorMessage =
-            "Cannot reach the portal. Please check your connection.";
+            "Cannot reach the college portal. It may be down - please try again later.";
         } else if (errorMessage.includes("Invalid credentials")) {
           // Keep as is - user-facing error
         } else if (errorMessage.includes("No subjects found")) {
@@ -829,6 +878,8 @@ export async function POST(req: Request) {
           // Keep as is - user-facing year validation error
         } else if (errorMessage.includes("Invalid DOB")) {
           // Keep as is - user-facing DOB format error
+        } else if (errorMessage.includes("queue timeout")) {
+          errorMessage = "Server is very busy. Please try again in 1-2 minutes.";
         } else {
           console.error("[ERROR] Unexpected error:", errorMessage);
           // Don't expose internal errors
@@ -838,7 +889,7 @@ export async function POST(req: Request) {
             !errorMessage.includes("queue") &&
             !errorMessage.includes("traffic")
           ) {
-            errorMessage = "Something went wrong. Please try again.";
+            errorMessage = "Something went wrong. Please try again in a moment.";
           }
         }
 

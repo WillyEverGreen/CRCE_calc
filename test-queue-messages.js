@@ -36,8 +36,12 @@ async function simulateUser(user, index) {
           try {
             const data = JSON.parse(line.replace("data: ", ""));
             if (data.type === "progress") {
-               // Log ALL progress to show the transition from Queue -> Processing
-               console.log(`[User ${index+1}] 🟢 MSG: "${data.message}"`);
+               // Only log queue related messages to verify the fix
+               if (data.message.includes("Queue")) {
+                   console.log(`[User ${index+1}] ⏳ QUEUE MSG: "${data.message}"`);
+               } else {
+                   // console.log(`[User ${index+1}] Progress: "${data.message}"`);
+               }
             } else if (data.type === "result") {
               console.log(`[User ${index+1}] ✅ Got Result! SGPA: ${data.data.sgpa}`);
             } else if (data.type === "error") {

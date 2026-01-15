@@ -80,11 +80,11 @@ export async function GET(req: NextRequest) {
         if (typeof u === "object" && u !== null) {
           // Handle auto-parsed JSON from Redis
           const data = u as any;
-          prn = data.prn || "";
+          prn = String(data.prn || "");
           timestamp = data.timestamp || "";
         } else if (typeof u === "string" && u.startsWith("{")) {
           const data = JSON.parse(u);
-          prn = data.prn || "";
+          prn = String(data.prn || "");
           timestamp = data.timestamp || "";
         } else {
           prn = String(u || "");
@@ -124,7 +124,7 @@ export async function GET(req: NextRequest) {
       
       // Parse leaderboard
       for (let i = 0; i < leaderboardRaw.length; i += 2) {
-        const prn = leaderboardRaw[i] as string;
+        const prn = String(leaderboardRaw[i] || "");
         const score = Number(leaderboardRaw[i + 1]);
         
         // Infer branch from PRN

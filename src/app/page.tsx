@@ -135,7 +135,16 @@ export default function Home() {
     setError(null);
     setResult(null);
     setFromCache(false);
-    setLoadingMessage(forceRefresh ? "Refreshing..." : "Connecting...");
+    setLoadingMessage(forceRefresh ? "🔄 Requesting fresh data..." : "🔗 Connecting to server...");
+
+    // Stuck detection: if no progress update in 15 seconds, show helpful message
+    let lastUpdateTime = Date.now();
+    const stuckCheckInterval = setInterval(() => {
+      const timeSinceUpdate = Date.now() - lastUpdateTime;
+      if (timeSinceUpdate > 15000) {
+        setLoadingMessage("⏳ Still working... Portal may be slow. Please wait.");
+      }
+    }, 5000);
 
     try {
       // Use fetch with streaming for real-time progress
@@ -178,6 +187,7 @@ export default function Home() {
               const data = JSON.parse(part.replace("data: ", ""));
               
               if (data.type === "progress") {
+                lastUpdateTime = Date.now(); // Reset stuck timer
                 setLoadingMessage(data.message);
               } else if (data.type === "result") {
                 setResult(data.data);
@@ -185,6 +195,7 @@ export default function Home() {
               } else if (data.type === "error") {
                 setError(data.error);
                 setLoading(false);
+                clearInterval(stuckCheckInterval);
                 return;
               }
             } catch (parseError) {
@@ -199,6 +210,7 @@ export default function Home() {
       setError(err instanceof Error ? err.message : "An unknown error occurred");
     } finally {
       setLoading(false);
+      clearInterval(stuckCheckInterval);
     }
   };
 
@@ -415,8 +427,8 @@ export default function Home() {
                       disabled={loading}
                       className={`w-full font-bold py-4 rounded-2xl shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-2 mt-4 
                         ${loading ? "opacity-90 cursor-wait" : ""}
-                        ${loadingMessage.toLowerCase().includes("queue") 
-                          ? "bg-yellow-600 hover:bg-yellow-700 text-white shadow-yellow-200"
+                        ${loadingMessage.toLowerCase().includes("queue")
+                          ? "bg-yellow-500 hover:bg-yellow-600 text-white shadow-yellow-200"
                           : "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-200"
                         }
                         ${isDarkMode && loadingMessage.toLowerCase().includes("queue") ? "shadow-yellow-900/20" : ""}
@@ -426,7 +438,7 @@ export default function Home() {
                       {loading ? (
                         <span className="flex items-center gap-2">
                           {loadingMessage.toLowerCase().includes("queue") ? (
-                            <span className="text-xl animate-pulse">⏳</span>
+                            <span className="text-lg">⏳</span>
                           ) : (
                             <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
