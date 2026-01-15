@@ -157,32 +157,40 @@ export default function Home() {
         throw new Error("Failed to start streaming");
       }
 
+      let buffer = "";
+      
       while (true) {
         const { done, value } = await reader.read();
+        
+        if (value) {
+          buffer += decoder.decode(value, { stream: !done });
+        }
+        
         if (done) break;
 
-        const text = decoder.decode(value);
-        const lines = text.split("\n\n").filter(line => line.startsWith("data: "));
+        const parts = buffer.split("\n\n");
+        // Keep the last part in the buffer as it might be incomplete
+        buffer = parts.pop() || "";
 
-        for (const line of lines) {
-          try {
-            const data = JSON.parse(line.replace("data: ", ""));
-            
-            if (data.type === "progress") {
-              setLoadingMessage(data.message);
-            } else if (data.type === "result") {
-              setResult(data.data);
-              setFromCache(data.fromCache === true);
-            } else if (data.type === "error") {
-              // Set error directly instead of throwing (which would be caught by inner catch)
-              setError(data.error);
-              setLoading(false);
-              return;
+        for (const part of parts) {
+          if (part.trim().startsWith("data: ")) {
+            try {
+              const data = JSON.parse(part.replace("data: ", ""));
+              
+              if (data.type === "progress") {
+                setLoadingMessage(data.message);
+              } else if (data.type === "result") {
+                setResult(data.data);
+                setFromCache(data.fromCache === true);
+              } else if (data.type === "error") {
+                setError(data.error);
+                setLoading(false);
+                return;
+              }
+            } catch (parseError) {
+              console.warn("Stream parse error:", parseError);
+              // Continue to next part
             }
-          } catch (parseError) {
-            // Ignore JSON parse errors for incomplete chunks
-            if (parseError instanceof SyntaxError) continue;
-            throw parseError; // Re-throw other errors
           }
         }
       }
