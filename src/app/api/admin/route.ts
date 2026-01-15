@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
           redis.get(`stats:daily:${today}`),
           redis.get("stats:cache_hits"),
           redis.lrange("stats:recent_users", 0, 49),
-          redis.lrange("queue:current", 0, -1),
+          redis.lrange("queue:waiting", 0, -1),
           redis.get("queue:active"),
           redis.scard("stats:unique_users"),
           redis.scard(`stats:unique_daily:${today}`)
