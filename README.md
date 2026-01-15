@@ -1,230 +1,263 @@
-# 🎓 CRCE Results Checker
+# CRCE Results Portal 🎓
 
-A modern, beautiful web application for checking academic results from Fr. Conceicao Rodrigues College of Engineering (CRCE). Built with Next.js, TypeScript, and Playwright for automated result scraping.
+A fast, modern web application to check your Fr. CRCE academic results and SGPA calculations.
 
-![Next.js](https://img.shields.io/badge/Next.js-16.0-black?style=flat-square&logo=next.js)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=flat-square&logo=typescript)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind-4.0-38B2AC?style=flat-square&logo=tailwind-css)
-![Playwright](https://img.shields.io/badge/Playwright-1.57-45ba4b?style=flat-square&logo=playwright)
+![Next.js](https://img.shields.io/badge/Next.js-16-black)
+![Playwright](https://img.shields.io/badge/Playwright-1.57-green)
+![Redis](https://img.shields.io/badge/Upstash-Redis-red)
 
 ## ✨ Features
 
-- 🔐 **Secure Authentication** - Login with PRN and Date of Birth
-- 📊 **Real-time Progress** - Server-sent events for live scraping updates
-- 🌓 **Dark Mode** - Beautiful dark/light theme toggle
-- 📱 **Mobile-First Design** - Optimized for mobile devices with a native app feel
-- ⚡ **Fast & Efficient** - Streaming responses and optimized scraping
-- 🎯 **SGPA Calculation** - Credit-weighted SGPA computation
-- 📈 **Subject-wise Breakdown** - Detailed marks and grades for each subject
-- 🎨 **Modern UI** - Clean, gradient-based design with smooth animations
+- **📊 Instant SGPA Calculation** - Accurate grade point calculations
+- **🚀 Fast Performance** - Cookie replay optimization (20x faster data fetching)
+- **💾 Smart Caching** - 6-hour Redis cache for instant repeat lookups
+- **👥 Multi-User Support** - Queue system handles 16+ concurrent users
+- **📱 Mobile-First Design** - Beautiful responsive UI with dark mode
+- **🔄 Real-time Updates** - Live progress streaming during data fetch
 
-## 🚀 Getting Started
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      User Request                            │
+└─────────────────────┬───────────────────────────────────────┘
+                      ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    Redis Cache Check                         │
+│                 (Cache hit? → Instant response!)             │
+└─────────────────────┬───────────────────────────────────────┘
+                      ▼ (Cache miss)
+┌─────────────────────────────────────────────────────────────┐
+│                    Queue System                              │
+│           MAX_CONCURRENT=4 | MAX_QUEUE=12                    │
+│         (Position updates every 2 seconds)                   │
+└─────────────────────┬───────────────────────────────────────┘
+                      ▼
+┌─────────────────────────────────────────────────────────────┐
+│              Playwright Login (~10s)                         │
+│         (Handles reCAPTCHA, captures cookies)                │
+└─────────────────────┬───────────────────────────────────────┘
+                      ▼
+┌─────────────────────────────────────────────────────────────┐
+│          🍪 Cookie Replay + Early Browser Close              │
+│              (Browser closes, HTTP takes over)               │
+└─────────────────────┬───────────────────────────────────────┘
+                      ▼
+┌─────────────────────────────────────────────────────────────┐
+│           Parallel HTTP Subject Fetching (~0.5s)             │
+│              (20x faster than browser-based)                 │
+└─────────────────────┬───────────────────────────────────────┘
+                      ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   SGPA Calculation                           │
+│            (Cache result, return to user)                    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## 🚀 Quick Start
 
 ### Prerequisites
-
-- Node.js 20.x or higher
-- npm, yarn, or pnpm
+- Node.js 20+
+- Upstash Redis account (for caching)
 
 ### Installation
 
-1. **Clone the repository**
+```bash
+# Clone the repository
+git clone https://github.com/your-username/crce-results.git
+cd crce-results
 
-   ```bash
-   git clone <your-repo-url>
-   cd CRCE
-   ```
+# Install dependencies
+npm install
 
-2. **Install dependencies**
+# Install Playwright browsers
+npx playwright install chromium
 
-   ```bash
-   npm install
-   ```
+# Copy environment template
+cp .env.example .env.local
+```
 
-3. **Install Playwright browsers**
+### Environment Variables
 
-   ```bash
-   npx playwright install chromium
-   ```
+Create `.env.local` with:
 
-4. **Run the development server**
+```env
+# Upstash Redis (required for caching)
+UPSTASH_REDIS_REST_URL=your_redis_url
+UPSTASH_REDIS_REST_TOKEN=your_redis_token
 
-   ```bash
-   npm run dev
-   ```
+# Admin panel access
+ADMIN_KEY=your_secret_admin_key
+```
 
-5. **Open your browser**
-   Navigate to [http://localhost:3000](http://localhost:3000)
+### Run Locally
+
+```bash
+# Development mode
+npm run dev
+
+# Production build
+npm run build
+npm start
+```
+
+Visit `http://localhost:3000`
+
+## 📡 API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/scrape` | POST | Fetch results (SSE streaming) |
+| `/api/admin?key=ADMIN_KEY` | GET | View queue stats & analytics |
+| `/api/health` | GET | Health check for keep-alive |
+
+### Scrape Request
+
+```bash
+curl -X POST http://localhost:3000/api/scrape \
+  -H "Content-Type: application/json" \
+  -d '{"prn": "MU1234567890", "dob": "01-01-2000"}'
+```
+
+## ⚡ Performance Optimizations
+
+### Cookie Replay Strategy
+Instead of keeping the browser open for the entire request, we:
+1. Use Playwright only for login (handles reCAPTCHA)
+2. Capture session cookies
+3. Close browser immediately (~10s vs 60s)
+4. Use pure HTTP for all data fetching (20x faster)
+
+### Queue System
+- **4 concurrent** browser instances
+- **12 queued** users with live position updates
+- **Race condition protection** prevents slot leaks
+- **Client disconnect detection** frees slots instantly
+
+### Caching
+- **6-hour TTL** on results
+- Cache hits return in **<200ms**
+- Force refresh available for users
+
+## 🧪 Testing
+
+### Load Test (10 concurrent users)
+
+```bash
+# Start with memory limit (simulates Render)
+npm run dev:mem-test
+
+# Run load test
+npm run test:load
+```
+
+### Cookie Replay Test
+
+```bash
+node test-cookie-replay.js
+```
+
+## 🌐 Deployment (Render)
+
+### render.yaml
+
+```yaml
+services:
+  - type: web
+    name: crce-results
+    env: node
+    plan: free
+    buildCommand: npm install && npx playwright install chromium --with-deps
+    startCommand: npm start
+    envVars:
+      - key: UPSTASH_REDIS_REST_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false
+      - key: ADMIN_KEY
+        sync: false
+```
+
+### Prevent Cold Starts
+
+Set up [UptimeRobot](https://uptimerobot.com) to ping `/api/health` every 5 minutes.
+
+## 📊 Admin Panel
+
+Access queue stats and analytics:
+
+```
+GET /api/admin?key=YOUR_ADMIN_KEY
+```
+
+Returns:
+```json
+{
+  "stats": {
+    "totalRequests": 1234,
+    "todayRequests": 56,
+    "cacheHits": 789,
+    "uniqueUsers": 234
+  },
+  "queue": {
+    "active": 2,
+    "waiting": ["MU12****5678"],
+    "maxConcurrent": 4
+  }
+}
+```
+
+## 🔧 Configuration
+
+### Queue Settings (route.ts)
+
+```typescript
+const MAX_CONCURRENT = 4;  // Parallel browser instances
+const MAX_QUEUE = 12;      // Max users waiting
+const CACHE_TTL = 60 * 60 * 6;  // 6 hours
+```
+
+### Memory Optimization
+
+For 512MB RAM (Render free tier):
+- MAX_CONCURRENT = 4 (with early browser close)
+- Browser lifetime: ~10s per request
+
+For 1GB+ RAM:
+- MAX_CONCURRENT = 8-10
+- Can handle 20+ concurrent users
 
 ## 📁 Project Structure
 
 ```
-CRCE/
-├── src/
-│   └── app/
-│       ├── api/
-│       │   └── scrape/
-│       │       └── route.ts      # API endpoint for result scraping
-│       ├── about/
-│       │   └── page.tsx          # About page
-│       ├── page.tsx              # Main home page
-│       ├── layout.tsx            # Root layout
-│       └── globals.css           # Global styles
-├── public/
-│   ├── icon.png                  # App icon
-│   ├── cir_logo.jpeg            # CRCE logo
-│   └── ...                       # Other static assets
-├── next.config.ts                # Next.js configuration
-├── tsconfig.json                 # TypeScript configuration
-├── package.json                  # Dependencies
-├── Dockerfile                    # Docker configuration
-└── README.md                     # This file
+src/
+├── app/
+│   ├── api/
+│   │   ├── scrape/route.ts   # Main scraping logic
+│   │   ├── admin/route.ts    # Analytics & queue stats
+│   │   └── health/route.ts   # Keep-alive endpoint
+│   ├── page.tsx              # Home page
+│   └── about/page.tsx        # About page
+├── lib/
+│   └── creditMap.ts          # Subject credit mappings
+└── components/
 ```
 
-## 🛠️ Tech Stack
+## 🛡️ Reliability Features
 
-- **Framework**: [Next.js 16](https://nextjs.org/) - React framework with App Router
-- **Language**: [TypeScript](https://www.typescriptlang.org/) - Type-safe JavaScript
-- **Styling**: [Tailwind CSS 4](https://tailwindcss.com/) - Utility-first CSS framework
-- **Scraping**: [Playwright](https://playwright.dev/) - Browser automation
-- **Parsing**: [Cheerio](https://cheerio.js.org/) - HTML parsing
-- **Deployment**: [Vercel](https://vercel.com/) - Serverless deployment
+| Feature | Protection |
+|---------|------------|
+| Queue overflow | Fail-fast after MAX_QUEUE (no crashes) |
+| Slot leaks | `timedOut` flag prevents race conditions |
+| Stuck requests | 60s queue timeout with cleanup |
+| Client disconnect | Instant slot release via AbortController |
+| Browser crashes | Always caught, slot released in finally |
+| Redis failures | Graceful degradation, errors logged |
 
-## 🎯 How It Works
+## 📝 License
 
-1. **User Input** - Student enters PRN and Date of Birth
-2. **Authentication** - Playwright automates login to CRCE portal
-3. **Scraping** - Iterates through subjects and extracts marks
-4. **Processing** - Calculates percentages, grades, and SGPA
-5. **Streaming** - Real-time progress updates via Server-Sent Events
-6. **Display** - Beautiful results with subject-wise breakdown
-
-## 📊 SGPA Calculation
-
-The app uses a credit-weighted SGPA calculation:
-
-```
-SGPA = Σ(Grade Points × Credits) / Σ Credits
-```
-
-**Grade Mapping**:
-
-- O (Outstanding): 10 points - 85%+
-- A (Excellent): 9 points - 80-84%
-- B (Very Good): 8 points - 70-79%
-- C (Good): 7 points - 60-69%
-- D (Satisfactory): 6 points - 50-59%
-- E (Pass): 5 points - 45-49%
-- P (Pass): 4 points - 40-44%
-- F (Fail): 0 points - Below 40%
-
-## 🐳 Docker Support
-
-Build and run with Docker:
-
-```bash
-# Build the image
-docker build -t crce-results .
-
-# Run the container
-docker run -p 3000:3000 crce-results
-```
-
-## 🌐 Deployment
-
-### Vercel (Recommended)
-
-1. Push your code to GitHub
-2. Import project in [Vercel](https://vercel.com)
-3. Ensure **Root Directory** is set to `.` (project root)
-4. Deploy!
-
-The app is optimized for Vercel's serverless environment with:
-
-- Edge runtime support
-- Automatic serverless functions
-- 60-second timeout for scraping operations
-
-### Other Platforms
-
-The app can be deployed to any platform supporting Node.js 20+ and Docker:
-
-- Railway
-- Render
-- AWS (EC2, ECS, Lambda)
-- Google Cloud Run
-- Azure Container Apps
-
-## 📝 Environment Variables
-
-No environment variables are required for basic operation. The app uses Playwright's bundled Chromium browser.
-
-## 🔒 Security & Privacy
-
-- **No Data Storage** - Results are not stored on the server
-- **Secure Connections** - All communication uses HTTPS
-- **Session Isolation** - Each request uses an isolated browser context
-- **No Credentials Stored** - Login credentials are never saved
-
-## ⚙️ Configuration
-
-### Next.js Config
-
-The `next.config.ts` includes:
-
-```typescript
-serverExternalPackages: ["playwright", "@sparticuz/chromium"];
-```
-
-This ensures Playwright works correctly in serverless environments.
-
-### API Timeout
-
-The scraping endpoint has a 60-second timeout:
-
-```typescript
-export const maxDuration = 60;
-```
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit issues and pull requests.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## 👨‍💻 Developer
-
-**Sai Balkawade**  
-Tech Member - Project Cell CRCE
-
-- [LinkedIn](https://www.linkedin.com/in/sai-balkawade-141ba4310/)
-
-## 🏢 About Project Cell
-
-[Project Cell CRCE](https://project-cell-crce.vercel.app/) is the innovation and development hub at Fr. Conceicao Rodrigues College of Engineering, dedicated to building impactful technology solutions.
-
-- 🌐 [Website](https://project-cell-crce.vercel.app/)
-- 📷 [Instagram](https://www.instagram.com/project_cell.crce)
-- 💻 [GitHub](https://github.com/Project-Cell-CRCE)
-
-## 📄 License
-
-This project is open source and available for educational purposes.
-
-## ⚠️ Disclaimer
-
-This SGPA calculator provides an estimate (±0.1). Official results may differ. Always refer to official university portals for final grades and results.
-
-## 🙏 Acknowledgments
-
-- Next.js team for the amazing framework
-- Playwright team for robust browser automation
-- Tailwind CSS for beautiful styling utilities
-- CRCE for the education and opportunities
+MIT License - Built for Fr. CRCE students by PCELL
 
 ---
 
-Made with 💚 by Sai Balkawade | Project Cell CRCE
+**Made with 💚 by Sai Balkawade**
