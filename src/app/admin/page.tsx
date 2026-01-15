@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 
 interface AdminStats {
@@ -10,8 +10,8 @@ interface AdminStats {
     todayRequests: number;
     cacheHits: number;
     cacheHitRate: number;
-    uniqueUsers: number;       // NEW
-    uniqueUsersToday: number;  // NEW
+    uniqueUsers: number;
+    uniqueUsersToday: number;
   };
   queue: {
     active: number;
@@ -25,16 +25,17 @@ interface AdminStats {
 
 function AdminContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [data, setData] = useState<AdminStats | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [keyInput, setKeyInput] = useState("");
   const key = searchParams.get("key");
 
   useEffect(() => {
     const fetchData = async () => {
       if (!key) {
-        setError("Admin key required. Add ?key=your_admin_key to URL");
         setLoading(false);
         return;
       }
@@ -108,6 +109,60 @@ function AdminContent() {
     }
   };
 
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (keyInput.trim()) {
+      router.push(`/admin?key=${keyInput.trim()}`);
+    }
+  };
+
+  // Show login form if no key
+  if (!key) {
+    return (
+      <div className={`min-h-screen flex items-center justify-center p-4 ${isDarkMode ? "bg-[#0f172a]" : "bg-[#e0f2f1]"}`}>
+        <div className={`w-full max-w-md rounded-[40px] shadow-2xl overflow-hidden ${isDarkMode ? "bg-emerald-900" : "bg-emerald-600"}`}>
+          <div className="p-8 text-white">
+            <div className="text-center mb-6">
+              <h1 className="text-2xl font-bold">Admin Panel</h1>
+              <p className={`text-sm mt-1 ${isDarkMode ? "text-emerald-400" : "text-emerald-200"}`}>
+                CRCE Results Dashboard
+              </p>
+            </div>
+            
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-emerald-100 mb-2">
+                  Admin Key
+                </label>
+                <input
+                  type="password"
+                  value={keyInput}
+                  onChange={(e) => setKeyInput(e.target.value)}
+                  placeholder="Enter admin key"
+                  className="w-full bg-white/20 border-none rounded-2xl py-4 px-4 text-white placeholder-emerald-200 focus:ring-2 focus:ring-white/50 focus:outline-none"
+                  required
+                />
+              </div>
+              
+              <button
+                type="submit"
+                className="w-full bg-white text-emerald-600 font-bold py-4 rounded-2xl shadow-lg hover:bg-emerald-50 transition-all"
+              >
+                Login
+              </button>
+            </form>
+            
+            <div className="mt-6 text-center">
+              <Link href="/" className="text-emerald-200 hover:text-white text-sm">
+                ← Back to App
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className={`min-h-screen flex items-center justify-center p-4 ${isDarkMode ? "bg-[#0f172a]" : "bg-[#e0f2f1]"}`}>
@@ -122,8 +177,8 @@ function AdminContent() {
         <div className={`w-full max-w-md rounded-[40px] shadow-2xl overflow-hidden p-8 ${isDarkMode ? "bg-emerald-900" : "bg-emerald-600"}`}>
           <div className="text-white text-center">
             <div className="text-xl mb-4">⚠️ {error}</div>
-            <Link href="/" className="text-emerald-200 hover:text-white underline">
-              ← Back to Home
+            <Link href="/admin" className="text-emerald-200 hover:text-white underline">
+              ← Try Again
             </Link>
           </div>
         </div>

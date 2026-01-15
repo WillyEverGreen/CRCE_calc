@@ -1,10 +1,18 @@
 import { Redis } from "@upstash/redis";
 import { NextRequest } from "next/server";
 
-const redis = process.env.UPSTASH_REDIS_REST_URL ? new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-}) : null;
+// Safe Redis initialization - fully optional
+let redis: Redis | null = null;
+if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+  try {
+    redis = new Redis({
+      url: process.env.UPSTASH_REDIS_REST_URL,
+      token: process.env.UPSTASH_REDIS_REST_TOKEN,
+    });
+  } catch (e) {
+    console.warn("Redis initialization failed (running without Redis):", e);
+  }
+}
 
 // Admin key for authentication
 const ADMIN_KEY = process.env.ADMIN_KEY || "crce-admin-2026";
@@ -19,39 +27,61 @@ export async function GET(req: NextRequest) {
   try {
     const today = new Date().toISOString().split("T")[0];
     
-    // Get stats from Redis
-    const [
-      totalRequests,
-      todayRequests,
-      cacheHits,
-      recentUsers,
-      queueCurrent,
-      activeCount,
-      uniqueUsersTotal,
-      uniqueUsersToday
-    ] = await Promise.all([
-      redis?.get("stats:total") || 0,
-      redis?.get(`stats:daily:${today}`) || 0,
-      redis?.get("stats:cache_hits") || 0,
-      redis?.lrange("stats:recent_users", 0, 49) || [],
-      redis?.lrange("queue:current", 0, -1) || [],
-      redis?.get("queue:active") || 0,
-      redis?.scard("stats:unique_users") || 0,          // Count of unique PRNs (all time)
-      redis?.scard(`stats:unique_daily:${today}`) || 0  // Count of unique PRNs today
-    ]);
+    // Initialize with default values
+    let totalRequests = 0;
+    let todayRequests = 0;
+    let cacheHits = 0;
+    let recentUsers: string[] = [];
+    let queueCurrent: string[] = [];
+    let activeCount = 0;
+    let uniqueUsersTotal = 0;
+    let uniqueUsersToday = 0;
+
+    // Try to get stats from Redis if available
+    if (redis) {
+      try {
+        const [
+          tr, tdr, ch, ru, qc, ac, uut, uud
+        ] = await Promise.all([
+          redis.get("stats:total"),
+          redis.get(`stats:daily:${today}`),
+          redis.get("stats:cache_hits"),
+          redis.lrange("stats:recent_users", 0, 49),
+          redis.lrange("queue:current", 0, -1),
+          redis.get("queue:active"),
+          redis.scard("stats:unique_users"),
+          redis.scard(`stats:unique_daily:${today}`)
+        ]);
+        
+        totalRequests = Number(tr) || 0;
+        todayRequests = Number(tdr) || 0;
+        cacheHits = Number(ch) || 0;
+        recentUsers = (ru as string[]) || [];
+        queueCurrent = (qc as string[]) || [];
+        activeCount = Number(ac) || 0;
+        uniqueUsersTotal = Number(uut) || 0;
+        uniqueUsersToday = Number(uud) || 0;
+      } catch (redisError) {
+        console.warn("Redis fetch failed (returning zeros):", redisError);
+        // Continue with default values
+      }
+    }
 
     // Parse recent users for branch distribution
     const branchCounts: Record<string, number> = {};
-    const userList = (recentUsers as string[]).map(u => {
+    const userList = recentUsers.map(u => {
+      // Ensure u is a string
+      const prn = String(u || '');
+      
       // Extract branch from PRN pattern
-      const match = u.match(/MU\d{4}(\d{2})/);
+      const match = prn.match(/MU\d{4}(\d{2})/);
       if (match) {
         const branchCode = match[1];
         const branchName = getBranchName(branchCode);
         branchCounts[branchName] = (branchCounts[branchName] || 0) + 1;
       }
       return {
-        prn: maskPRN(u),
+        prn: maskPRN(prn),
         timestamp: new Date().toISOString() // Would need to store this separately for accuracy
       };
     });
