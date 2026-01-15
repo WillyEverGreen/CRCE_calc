@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
       queue: {
         active: Number(activeCount),
         waiting: (queueCurrent as string[]).map(p => maskPRN(p)),
-        maxConcurrent: 4  // Updated to match new MAX_CONCURRENT
+        maxConcurrent: 4  // Updated: early browser close = can handle more concurrent
       },
       recentUsers: userList.slice(0, 20),
       branchDistribution: branchCounts,
